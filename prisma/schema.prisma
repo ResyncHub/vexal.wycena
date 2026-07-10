@@ -1,0 +1,224 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Cennik / katalog (edytowalny w panelu admina)
+// ---------------------------------------------------------------------------
+
+enum LamelaFinish {
+  MALOWANA_RAL
+  DREWNOPODOBNA
+}
+
+// Cena pojedynczej lameli wg długości cięcia (cm), zależna od wykończenia.
+model LamelaPriceTier {
+  id          String       @id @default(cuid())
+  finish      LamelaFinish
+  lengthCm    Int
+  priceNetPln Decimal      @db.Decimal(10, 2)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([finish, lengthCm])
+}
+
+enum ProfileType {
+  RAMA // profil aluminiowy do złożenia ramy
+  DRZWI_PRZESUWNE_GORNY // profil górny do drzwi przesuwnych (szyna jezdna)
+  DRZWI_PRZESUWNE_DOLNY // profil dolny do drzwi przesuwnych (prowadnica dolna)
+}
+
+// Cena odcinka profilu (rama lub szyny drzwi przesuwnych) wg długości (cm).
+model ProfilePriceTier {
+  id          String      @id @default(cuid())
+  profileType ProfileType
+  lengthCm    Int
+  priceNetPln Decimal     @db.Decimal(10, 2)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([profileType, lengthCm])
+}
+
+enum OkucieMaterial {
+  ALUMINIOWE
+  PLASTIKOWE
+}
+
+// Zestaw okucia (L+P) obsługujący do 6 lameli/deszczułek w module.
+model OkucieSetPrice {
+  id          String         @id @default(cuid())
+  material    OkucieMaterial @unique
+  priceNetPln Decimal        @db.Decimal(10, 2)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+enum FixedPartCode {
+  SLIDING_CARRIAGE_SET // okucie do drzwi przesuwnych (wózek jezdny) - 1 na moduł jezdny
+  SLIDING_GUIDE_ROLLER // rolka prowadząca dolna do drzwi przesuwnych - 2 na moduł jezdny
+}
+
+// Pozycje o stałej cenie, niezależnej od wymiaru (dodatki do modułu jezdnego).
+model FixedPricePart {
+  id          String        @id @default(cuid())
+  code        FixedPartCode @unique
+  label       String
+  priceNetPln Decimal       @db.Decimal(10, 2)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+enum LamelaOrientation {
+  POZIOMO // lamele poziome, okucia pionowe -> wymiar "od liczby lameli" = wysokość
+  PIONOWO // lamele pionowe, okucia poziome -> wymiar "od liczby lameli" = szerokość
+}
+
+// Tabela producenta: dla danej orientacji i potrzebnego pokrycia (cm),
+// ile lameli i ile zestawów uchwytów (okuć) jest potrzebnych.
+// Odczyt: znajdź najmniejszy wiersz z coverageCm >= potrzebne pokrycie.
+model CoverageLookupRow {
+  id          String            @id @default(cuid())
+  orientation LamelaOrientation
+  coverageCm  Decimal           @db.Decimal(6, 1)
+  lamelCount  Int
+  uchwytSets  Int
+  createdAt   DateTime          @default(now())
+
+  @@unique([orientation, coverageCm])
+}
+
+// ---------------------------------------------------------------------------
+// Ustawienia firmy (branding, dane do PDF, domyślny narzut)
+// ---------------------------------------------------------------------------
+
+model CompanySettings {
+  id                     String   @id @default(cuid())
+  name                   String
+  address                String?
+  nip                    String?
+  phone                  String?
+  email                  String?
+  bankAccount            String?
+  logoUrl                String?
+  footerTerms            String?
+  quoteValidityDays      Int      @default(14)
+  defaultMarkupPercent   Decimal  @default(0) @db.Decimal(6, 2)
+  defaultInstallationPln Decimal  @default(0) @db.Decimal(10, 2)
+  quoteNumberPrefix      String   @default("WYC")
+  updatedAt              DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Klienci
+// ---------------------------------------------------------------------------
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  isCompany Boolean  @default(false)
+  nip       String?
+  address   String?
+  email     String?
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quotes Quote[]
+}
+
+// ---------------------------------------------------------------------------
+// Wyceny
+// ---------------------------------------------------------------------------
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+model Quote {
+  id              String      @id @default(cuid())
+  number          String      @unique
+  status          QuoteStatus @default(DRAFT)
+  clientId        String?
+  client          Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  validUntil      DateTime?
+  discountPercent Decimal     @default(0) @db.Decimal(6, 2)
+  installationPln Decimal     @default(0) @db.Decimal(10, 2)
+  notes           String?
+  totalCostPln    Decimal     @default(0) @db.Decimal(10, 2)
+  totalPricePln   Decimal     @default(0) @db.Decimal(10, 2)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  openings QuoteOpening[]
+}
+
+// Otwór do zabudowy - grupuje moduły; jeśli zawiera moduł jezdny, dolicza
+// się (raz, na szerokość otworu) wspólna szyna górna i prowadnica dolna.
+model QuoteOpening {
+  id                           String   @id @default(cuid())
+  quoteId                      String
+  quote                        Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  label                        String
+  widthCm                      Decimal  @db.Decimal(6, 1)
+  position                     Int      @default(0)
+  slidingTopProfileLengthCm    Int?
+  slidingBottomProfileLengthCm Int?
+  slidingRailCostNetPln        Decimal  @default(0) @db.Decimal(10, 2)
+  createdAt                    DateTime @default(now())
+
+  modules QuoteModule[]
+}
+
+enum ModuleType {
+  STALY
+  JEZDNY
+}
+
+model QuoteModule {
+  id                         String            @id @default(cuid())
+  openingId                  String
+  opening                    QuoteOpening      @relation(fields: [openingId], references: [id], onDelete: Cascade)
+  position                   Int               @default(0)
+  type                       ModuleType
+  widthCm                    Decimal           @db.Decimal(6, 1)
+  heightCm                   Decimal           @db.Decimal(6, 1)
+  orientation                LamelaOrientation
+  finish                     LamelaFinish
+  ralColor                   String?
+  okucieMaterial             OkucieMaterial
+  lamelCount                 Int
+  lamelLengthCm              Int
+  uchwytSets                 Int
+  frameWidthProfileLengthCm  Int
+  frameHeightProfileLengthCm Int
+  costBreakdownJson          Json
+  costNetPln                 Decimal           @db.Decimal(10, 2)
+  createdAt                  DateTime          @default(now())
+}
