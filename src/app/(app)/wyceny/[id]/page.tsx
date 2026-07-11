@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
@@ -7,6 +8,7 @@ import {
   computeDimensionDeviationCm,
   formatDimensionDeviationLabel,
 } from "@/lib/pricing/opening-fit";
+import type { ModuleCostLine } from "@/lib/pricing/types";
 import {
   addModule,
   addOpening,
@@ -30,6 +32,35 @@ function fmt(n: number) {
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
   return date.toISOString().slice(0, 10);
+}
+
+function parseCostLines(json: unknown): ModuleCostLine[] {
+  return Array.isArray(json) ? (json as ModuleCostLine[]) : [];
+}
+
+function CostLinesTable({ lines }: { lines: ModuleCostLine[] }) {
+  return (
+    <table className="w-full text-xs">
+      <thead className="text-left text-neutral-400">
+        <tr>
+          <th className="py-1 font-medium">Element</th>
+          <th className="py-1 font-medium">Ilość</th>
+          <th className="py-1 font-medium">Cena jedn. netto</th>
+          <th className="py-1 font-medium">Wartość netto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {lines.map((line, i) => (
+          <tr key={i} className="border-t border-neutral-100">
+            <td className="py-1 text-neutral-600">{line.label}</td>
+            <td className="py-1 text-neutral-600">{line.quantity}</td>
+            <td className="py-1 text-neutral-600">{fmt(line.unitPriceNetPln)} zł</td>
+            <td className="py-1 text-neutral-700">{fmt(line.totalNetPln)} zł</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 export default async function QuoteDetailPage({
@@ -174,10 +205,12 @@ export default async function QuoteDetailPage({
                     </span>
                   </h3>
                   {hasSliding && (
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Szyna górna {opening.slidingTopProfileLengthCm} cm, prowadnica dolna{" "}
-                      {opening.slidingBottomProfileLengthCm} cm — {fmt(toNumber(opening.slidingRailCostNetPln))} zł netto
-                    </p>
+                    <div className="mt-2 max-w-md">
+                      <p className="mb-1 text-xs font-medium text-neutral-500">
+                        Wspólna szyna do drzwi przesuwnych (na szerokość otworu)
+                      </p>
+                      <CostLinesTable lines={parseCostLines(opening.railCostBreakdownJson)} />
+                    </div>
                   )}
                 </div>
                 <form action={boundDeleteOpening.bind(null, opening.id)}>
@@ -203,55 +236,62 @@ export default async function QuoteDetailPage({
                   </thead>
                   <tbody>
                     {opening.modules.map((m) => (
-                      <tr key={m.id} className="border-t border-neutral-100">
-                        <td className="py-1.5 text-neutral-700">
-                          {m.type === "JEZDNY" ? "Jezdny" : "Stały"}
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {toNumber(m.actualWidthCm)}×{toNumber(m.actualHeightCm)} cm
-                          {(toNumber(m.actualWidthCm) !== toNumber(m.widthCm) ||
-                            toNumber(m.actualHeightCm) !== toNumber(m.heightCm)) && (
-                            <div className="text-xs text-neutral-400">
-                              wpisano {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
-                            </div>
-                          )}
-                          <div className="text-xs text-neutral-400">
-                            {formatDimensionDeviationLabel(
-                              m.orientation,
-                              computeDimensionDeviationCm(
-                                m.orientation,
-                                toNumber(m.actualWidthCm),
-                                toNumber(m.actualHeightCm),
-                                toNumber(opening.widthCm),
-                                toNumber(opening.heightCm),
-                              ),
+                      <Fragment key={m.id}>
+                        <tr className="border-t border-neutral-100">
+                          <td className="py-1.5 text-neutral-700">
+                            {m.type === "JEZDNY" ? "Jezdny" : "Stały"}
+                          </td>
+                          <td className="py-1.5 text-neutral-700">
+                            {toNumber(m.actualWidthCm)}×{toNumber(m.actualHeightCm)} cm
+                            {(toNumber(m.actualWidthCm) !== toNumber(m.widthCm) ||
+                              toNumber(m.actualHeightCm) !== toNumber(m.heightCm)) && (
+                              <div className="text-xs text-neutral-400">
+                                wpisano {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
+                              </div>
                             )}
-                          </div>
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {m.orientation === "POZIOMO" ? "poziome" : "pionowe"}
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {m.finish === "MALOWANA_RAL" ? "RAL" : "drewnopodobna"}
-                          {m.ralColor ? ` (${m.ralColor})` : ""}
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {m.lamelCount}× {m.lamelLengthCm} cm
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {m.uchwytSets}× {m.okucieMaterial === "ALUMINIOWE" ? "alu" : "plastik"}
-                        </td>
-                        <td className="py-1.5 font-medium text-neutral-900">
-                          {fmt(toNumber(m.costNetPln))} zł
-                        </td>
-                        <td className="py-1.5 text-right">
-                          <form action={boundDeleteModule.bind(null, m.id)}>
-                            <button type="submit" className="text-red-600 hover:underline">
-                              Usuń
-                            </button>
-                          </form>
-                        </td>
-                      </tr>
+                            <div className="text-xs text-neutral-400">
+                              {formatDimensionDeviationLabel(
+                                m.orientation,
+                                computeDimensionDeviationCm(
+                                  m.orientation,
+                                  toNumber(m.actualWidthCm),
+                                  toNumber(m.actualHeightCm),
+                                  toNumber(opening.widthCm),
+                                  toNumber(opening.heightCm),
+                                ),
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-1.5 text-neutral-700">
+                            {m.orientation === "POZIOMO" ? "poziome" : "pionowe"}
+                          </td>
+                          <td className="py-1.5 text-neutral-700">
+                            {m.finish === "MALOWANA_RAL" ? "RAL" : "drewnopodobna"}
+                            {m.ralColor ? ` (${m.ralColor})` : ""}
+                          </td>
+                          <td className="py-1.5 text-neutral-700">
+                            {m.lamelCount}× {m.lamelLengthCm} cm
+                          </td>
+                          <td className="py-1.5 text-neutral-700">
+                            {m.uchwytSets}× {m.okucieMaterial === "ALUMINIOWE" ? "alu" : "plastik"}
+                          </td>
+                          <td className="py-1.5 font-medium text-neutral-900">
+                            {fmt(toNumber(m.costNetPln))} zł
+                          </td>
+                          <td className="py-1.5 text-right">
+                            <form action={boundDeleteModule.bind(null, m.id)}>
+                              <button type="submit" className="text-red-600 hover:underline">
+                                Usuń
+                              </button>
+                            </form>
+                          </td>
+                        </tr>
+                        <tr className="border-t border-neutral-100 bg-neutral-50">
+                          <td colSpan={8} className="py-2 pl-4">
+                            <CostLinesTable lines={parseCostLines(m.costBreakdownJson)} />
+                          </td>
+                        </tr>
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
