@@ -187,6 +187,7 @@ model QuoteOpening {
   quote                        Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   label                        String
   widthCm                      Decimal  @db.Decimal(6, 1)
+  heightCm                     Decimal  @db.Decimal(6, 1)
   position                     Int      @default(0)
   slidingTopProfileLengthCm    Int?
   slidingBottomProfileLengthCm Int?

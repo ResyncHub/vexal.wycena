@@ -1,5 +1,9 @@
 import path from "node:path";
 import { Document, Page, View, Text, Image, StyleSheet, Font } from "@react-pdf/renderer";
+import {
+  computeDimensionDeviationCm,
+  formatDimensionDeviationLabel,
+} from "@/lib/pricing/opening-fit";
 
 Font.register({
   family: "Liberation Sans",
@@ -56,6 +60,7 @@ const styles = StyleSheet.create({
   colValue: { width: "18%", textAlign: "right" },
   headerCell: { fontSize: 8, fontWeight: "bold", color: "#525252", textTransform: "uppercase" },
   cell: { fontSize: 9 },
+  cellSub: { fontSize: 7, color: "#737373", marginTop: 1 },
   summary: { marginTop: 20, alignSelf: "flex-end", width: "50%" },
   summaryRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 3 },
   summaryLabel: { fontSize: 9, color: "#525252" },
@@ -107,6 +112,7 @@ export interface PdfModuleLine {
 export interface PdfOpening {
   label: string;
   widthCm: number;
+  heightCm: number;
   modules: PdfModuleLine[];
   slidingRailValuePln: number | null;
 }
@@ -194,7 +200,7 @@ export function QuoteDocument({
         {openings.map((opening, i) => (
           <View key={i} wrap={false}>
             <Text style={styles.openingTitle}>
-              {opening.label} (szerokość otworu {opening.widthCm} cm)
+              {opening.label} (szerokość otworu {opening.widthCm} cm, wysokość otworu {opening.heightCm} cm)
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeaderRow}>
@@ -209,9 +215,23 @@ export function QuoteDocument({
                     {m.type === "JEZDNY" ? "Moduł jezdny (przesuwny)" : "Moduł stały"},{" "}
                     {ORIENTATION_LABEL[m.orientation]}
                   </Text>
-                  <Text style={[styles.cell, styles.colDim]}>
-                    {m.widthCm}×{m.heightCm} cm
-                  </Text>
+                  <View style={styles.colDim}>
+                    <Text style={styles.cell}>
+                      {m.widthCm}×{m.heightCm} cm
+                    </Text>
+                    <Text style={styles.cellSub}>
+                      {formatDimensionDeviationLabel(
+                        m.orientation,
+                        computeDimensionDeviationCm(
+                          m.orientation,
+                          m.widthCm,
+                          m.heightCm,
+                          opening.widthCm,
+                          opening.heightCm,
+                        ),
+                      )}
+                    </Text>
+                  </View>
                   <Text style={[styles.cell, styles.colFinish]}>
                     {FINISH_LABEL[m.finish]}
                     {m.ralColor ? `, ${m.ralColor}` : ""}

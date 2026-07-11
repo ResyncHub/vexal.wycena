@@ -48,6 +48,7 @@ export async function duplicateQuote(formData: FormData) {
         quoteId: newQuote.id,
         label: opening.label,
         widthCm: opening.widthCm,
+        heightCm: opening.heightCm,
         position: opening.position,
       },
     });

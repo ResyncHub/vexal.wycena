@@ -36,15 +36,19 @@ export async function updateQuoteHeader(quoteId: string, formData: FormData) {
 export async function addOpening(quoteId: string, formData: FormData) {
   const label = String(formData.get("label") ?? "").trim() || "Otwór";
   const widthCm = Number(String(formData.get("widthCm") ?? "").replace(",", "."));
+  const heightCm = Number(String(formData.get("heightCm") ?? "").replace(",", "."));
 
   if (!Number.isFinite(widthCm) || widthCm <= 0) {
     throw new PricingError("Podaj poprawną szerokość otworu.");
+  }
+  if (!Number.isFinite(heightCm) || heightCm <= 0) {
+    throw new PricingError("Podaj poprawną wysokość otworu.");
   }
 
   const count = await db.quoteOpening.count({ where: { quoteId } });
 
   await db.quoteOpening.create({
-    data: { quoteId, label, widthCm, position: count },
+    data: { quoteId, label, widthCm, heightCm, position: count },
   });
 
   revalidatePath(`/wyceny/${quoteId}`);

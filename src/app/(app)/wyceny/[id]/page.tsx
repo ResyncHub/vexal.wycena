@@ -3,38 +3,23 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/decimal";
 import {
+  computeDimensionDeviationCm,
+  formatDimensionDeviationLabel,
+} from "@/lib/pricing/opening-fit";
+import {
   addModule,
   addOpening,
   deleteModule,
   deleteOpening,
   updateQuoteHeader,
 } from "./actions";
+import { AddModuleForm } from "./AddModuleForm";
 
 const STATUS_OPTIONS = [
   { value: "DRAFT", label: "Szkic" },
   { value: "SENT", label: "Wysłana" },
   { value: "ACCEPTED", label: "Zaakceptowana" },
   { value: "REJECTED", label: "Odrzucona" },
-];
-
-const FINISH_OPTIONS = [
-  { value: "MALOWANA_RAL", label: "Malowana RAL" },
-  { value: "DREWNOPODOBNA", label: "Drewnopodobna" },
-];
-
-const OKUCIE_OPTIONS = [
-  { value: "ALUMINIOWE", label: "Aluminiowe" },
-  { value: "PLASTIKOWE", label: "Plastikowe" },
-];
-
-const ORIENTATION_OPTIONS = [
-  { value: "POZIOMO", label: "Lamele poziome" },
-  { value: "PIONOWO", label: "Lamele pionowe" },
-];
-
-const TYPE_OPTIONS = [
-  { value: "STALY", label: "Stały" },
-  { value: "JEZDNY", label: "Jezdny (przesuwny)" },
 ];
 
 function fmt(n: number) {
@@ -181,7 +166,10 @@ export default async function QuoteDetailPage({
                 <div>
                   <h3 className="font-medium text-neutral-900">
                     {opening.label}{" "}
-                    <span className="text-neutral-400">· szerokość otworu {toNumber(opening.widthCm)} cm</span>
+                    <span className="text-neutral-400">
+                      · szerokość otworu {toNumber(opening.widthCm)} cm · wysokość otworu{" "}
+                      {toNumber(opening.heightCm)} cm
+                    </span>
                   </h3>
                   {hasSliding && (
                     <p className="mt-1 text-sm text-neutral-500">
@@ -219,6 +207,18 @@ export default async function QuoteDetailPage({
                         </td>
                         <td className="py-1.5 text-neutral-700">
                           {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
+                          <div className="text-xs text-neutral-400">
+                            {formatDimensionDeviationLabel(
+                              m.orientation,
+                              computeDimensionDeviationCm(
+                                m.orientation,
+                                toNumber(m.widthCm),
+                                toNumber(m.heightCm),
+                                toNumber(opening.widthCm),
+                                toNumber(opening.heightCm),
+                              ),
+                            )}
+                          </div>
                         </td>
                         <td className="py-1.5 text-neutral-700">
                           {m.orientation === "POZIOMO" ? "poziome" : "pionowe"}
@@ -253,89 +253,11 @@ export default async function QuoteDetailPage({
                 <summary className="cursor-pointer text-sm font-medium text-neutral-700">
                   + Dodaj moduł
                 </summary>
-                <form action={boundAddModule} className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-neutral-600">Typ</label>
-                    <select name="type" className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm">
-                      {TYPE_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-neutral-600">Szerokość (cm)</label>
-                    <input
-                      name="widthCm"
-                      required
-                      className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-neutral-600">Wysokość (cm)</label>
-                    <input
-                      name="heightCm"
-                      required
-                      className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-neutral-600">Orientacja</label>
-                    <select
-                      name="orientation"
-                      className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
-                    >
-                      {ORIENTATION_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-neutral-600">Wykończenie</label>
-                    <select
-                      name="finish"
-                      className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
-                    >
-                      {FINISH_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-neutral-600">Okucie</label>
-                    <select
-                      name="okucieMaterial"
-                      className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
-                    >
-                      {OKUCIE_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="mb-1 block text-xs font-medium text-neutral-600">Kolor RAL (opcjonalnie)</label>
-                    <input
-                      name="ralColor"
-                      placeholder="np. RAL 7016"
-                      className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <button
-                      type="submit"
-                      className="rounded-md bg-neutral-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-neutral-800"
-                    >
-                      Dodaj moduł
-                    </button>
-                  </div>
-                </form>
+                <AddModuleForm
+                  action={boundAddModule}
+                  openingWidthCm={toNumber(opening.widthCm)}
+                  openingHeightCm={toNumber(opening.heightCm)}
+                />
               </details>
             </div>
           );
@@ -357,6 +279,12 @@ export default async function QuoteDetailPage({
                 Szerokość całego otworu (cm)
               </label>
               <input name="widthCm" required className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-neutral-600">
+                Wysokość całego otworu (cm)
+              </label>
+              <input name="heightCm" required className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm" />
             </div>
             <button
               type="submit"
