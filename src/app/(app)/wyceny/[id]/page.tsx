@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/decimal";
+import { loadPriceCatalog } from "@/lib/pricing/catalog";
 import {
   computeDimensionDeviationCm,
   formatDimensionDeviationLabel,
@@ -52,6 +53,7 @@ export default async function QuoteDetailPage({
   if (!quote) notFound();
 
   const clients = await db.client.findMany({ orderBy: { name: "asc" } });
+  const catalog = await loadPriceCatalog();
 
   const boundUpdateHeader = updateQuoteHeader.bind(null, quote.id);
   const boundAddOpening = addOpening.bind(null, quote.id);
@@ -206,14 +208,20 @@ export default async function QuoteDetailPage({
                           {m.type === "JEZDNY" ? "Jezdny" : "Stały"}
                         </td>
                         <td className="py-1.5 text-neutral-700">
-                          {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
+                          {toNumber(m.actualWidthCm)}×{toNumber(m.actualHeightCm)} cm
+                          {(toNumber(m.actualWidthCm) !== toNumber(m.widthCm) ||
+                            toNumber(m.actualHeightCm) !== toNumber(m.heightCm)) && (
+                            <div className="text-xs text-neutral-400">
+                              wpisano {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
+                            </div>
+                          )}
                           <div className="text-xs text-neutral-400">
                             {formatDimensionDeviationLabel(
                               m.orientation,
                               computeDimensionDeviationCm(
                                 m.orientation,
-                                toNumber(m.widthCm),
-                                toNumber(m.heightCm),
+                                toNumber(m.actualWidthCm),
+                                toNumber(m.actualHeightCm),
                                 toNumber(opening.widthCm),
                                 toNumber(opening.heightCm),
                               ),
@@ -257,6 +265,7 @@ export default async function QuoteDetailPage({
                   action={boundAddModule}
                   openingWidthCm={toNumber(opening.widthCm)}
                   openingHeightCm={toNumber(opening.heightCm)}
+                  coverageTable={catalog.coverageTable}
                 />
               </details>
             </div>

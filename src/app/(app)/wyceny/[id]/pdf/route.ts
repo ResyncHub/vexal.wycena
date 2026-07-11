@@ -37,6 +37,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         type: m.type,
         widthCm: toNumber(m.widthCm),
         heightCm: toNumber(m.heightCm),
+        actualWidthCm: toNumber(m.actualWidthCm),
+        actualHeightCm: toNumber(m.actualHeightCm),
         orientation: m.orientation,
         finish: m.finish,
         ralColor: m.ralColor,

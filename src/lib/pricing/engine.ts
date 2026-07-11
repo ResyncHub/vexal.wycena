@@ -62,6 +62,26 @@ function priceForLength(priceByLength: Map<number, number>, lengthCm: number): n
   return price;
 }
 
+/** Lamele mają sztywny skok (każda dokłada tyle samo do stosu), więc
+ * rzeczywisty wymiar gotowego modułu po stronie lameli wynika z liczby
+ * lameli w wybranym wierszu tabeli pokrycia, a nie z wpisanej wartości -
+ * prawie nigdy nie trafi się dokładnie w to, co wpisano. */
+export function computeActualStackDimCm(
+  orientation: LamelaOrientation,
+  stackDimCm: number,
+  coverageTable: CoverageRow[],
+): { coverageRow: CoverageRow; actualStackDimCm: number } {
+  const neededCoverageCm = stackDimCm - FRAME_LUZ_CM - 2 * FRAME_PROFILE_WIDTH_CM;
+  if (neededCoverageCm <= 0) {
+    throw new PricingError(
+      `Wymiar ${stackDimCm} cm jest za mały, aby zmieścić ramę i luz montażowy.`,
+    );
+  }
+  const coverageRow = findCoverageRow(orientation, neededCoverageCm, coverageTable);
+  const actualStackDimCm = round2(coverageRow.coverageCm + FRAME_LUZ_CM + 2 * FRAME_PROFILE_WIDTH_CM);
+  return { coverageRow, actualStackDimCm };
+}
+
 export function computeModuleCost(
   input: ModuleInput,
   catalog: PriceCatalog,
@@ -77,13 +97,18 @@ export function computeModuleCost(
   const stackDimCm = orientation === "POZIOMO" ? heightCm : widthCm;
   const lamelDimCm = orientation === "POZIOMO" ? widthCm : heightCm;
 
-  const neededCoverageCm = stackDimCm - FRAME_LUZ_CM - 2 * FRAME_PROFILE_WIDTH_CM;
-  if (neededCoverageCm <= 0) {
-    throw new PricingError(
-      `Wymiar ${stackDimCm} cm jest za mały, aby zmieścić ramę i luz montażowy.`,
-    );
-  }
-  const coverageRow = findCoverageRow(orientation, neededCoverageCm, catalog.coverageTable);
+  const { coverageRow, actualStackDimCm } = computeActualStackDimCm(
+    orientation,
+    stackDimCm,
+    catalog.coverageTable,
+  );
+
+  // Rama musi faktycznie pomieścić stos lameli, więc jej wymiar po stronie
+  // lameli liczymy od wymiaru rzeczywistego (po zaokrągleniu do liczby
+  // lameli), a nie od wpisanej wartości - inaczej rama mogłaby wyjść za
+  // krótka na realnie złożony moduł.
+  const actualWidthCm = orientation === "POZIOMO" ? widthCm : actualStackDimCm;
+  const actualHeightCm = orientation === "POZIOMO" ? actualStackDimCm : heightCm;
 
   const neededLamelLengthCm = lamelDimCm - 2 * FRAME_PROFILE_WIDTH_CM;
   if (neededLamelLengthCm <= 0) {
@@ -95,8 +120,8 @@ export function computeModuleCost(
   const lamelLengthCm = pickStrictlyGreaterLength(neededLamelLengthCm, lamelPrices);
   const lamelUnitPrice = priceForLength(lamelPrices, lamelLengthCm);
 
-  const frameWidthProfileLengthCm = pickStrictlyGreaterLength(widthCm, catalog.framePrices);
-  const frameHeightProfileLengthCm = pickStrictlyGreaterLength(heightCm, catalog.framePrices);
+  const frameWidthProfileLengthCm = pickStrictlyGreaterLength(actualWidthCm, catalog.framePrices);
+  const frameHeightProfileLengthCm = pickStrictlyGreaterLength(actualHeightCm, catalog.framePrices);
   const frameWidthPrice = priceForLength(catalog.framePrices, frameWidthProfileLengthCm);
   const frameHeightPrice = priceForLength(catalog.framePrices, frameHeightProfileLengthCm);
 
@@ -150,6 +175,8 @@ export function computeModuleCost(
     lamelCount: coverageRow.lamelCount,
     lamelLengthCm,
     uchwytSets: coverageRow.uchwytSets,
+    actualWidthCm,
+    actualHeightCm,
     frameWidthProfileLengthCm,
     frameHeightProfileLengthCm,
     lines,

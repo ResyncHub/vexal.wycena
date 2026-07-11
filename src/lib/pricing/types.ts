@@ -41,6 +41,10 @@ export interface ModuleCostResult {
   lamelCount: number;
   lamelLengthCm: number;
   uchwytSets: number;
+  /** Rzeczywisty wymiar gotowego modułu po stronie lameli (sztywny skok
+   * lamela-po-lameli) - może różnić się od wpisanego widthCm/heightCm. */
+  actualWidthCm: number;
+  actualHeightCm: number;
   frameWidthProfileLengthCm: number;
   frameHeightProfileLengthCm: number;
   lines: ModuleCostLine[];

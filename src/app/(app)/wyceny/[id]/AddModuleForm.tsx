@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { computeActualStackDimCm, PricingError } from "@/lib/pricing/engine";
 import {
   computeDimensionDeviationCm,
   formatDimensionDeviationLabel,
 } from "@/lib/pricing/opening-fit";
-import type { LamelaOrientation } from "@/lib/pricing/types";
+import type { CoverageRow, LamelaOrientation } from "@/lib/pricing/types";
 
 const FINISH_OPTIONS = [
   { value: "MALOWANA_RAL", label: "Malowana RAL" },
@@ -32,14 +33,20 @@ function parseCm(raw: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
 export function AddModuleForm({
   action,
   openingWidthCm,
   openingHeightCm,
+  coverageTable,
 }: {
   action: (formData: FormData) => void;
   openingWidthCm: number;
   openingHeightCm: number;
+  coverageTable: CoverageRow[];
 }) {
   const [orientation, setOrientation] = useState<LamelaOrientation>("POZIOMO");
   const [widthCm, setWidthCm] = useState("");
@@ -47,15 +54,38 @@ export function AddModuleForm({
 
   const parsedWidth = parseCm(widthCm);
   const parsedHeight = parseCm(heightCm);
-  const relevantDimSet = orientation === "POZIOMO" ? parsedHeight !== null : parsedWidth !== null;
 
-  const deviationLabel =
-    relevantDimSet && parsedWidth !== null && parsedHeight !== null
-      ? formatDimensionDeviationLabel(
+  // Lamele mają sztywny skok, więc rzeczywisty wymiar gotowego modułu po
+  // stronie lameli prawie nigdy nie trafi dokładnie w to, co wpisano -
+  // liczymy go tak samo jak przy zapisie modułu, żeby pokazać realny wynik
+  // zanim jeszcze moduł zostanie dodany.
+  const preview = useMemo(() => {
+    if (parsedWidth === null || parsedHeight === null) return null;
+    const stackDimCm = orientation === "POZIOMO" ? parsedHeight : parsedWidth;
+    try {
+      const { actualStackDimCm } = computeActualStackDimCm(orientation, stackDimCm, coverageTable);
+      return {
+        actualWidthCm: orientation === "POZIOMO" ? parsedWidth : actualStackDimCm,
+        actualHeightCm: orientation === "POZIOMO" ? actualStackDimCm : parsedHeight,
+      };
+    } catch (e) {
+      if (e instanceof PricingError) return null;
+      throw e;
+    }
+  }, [orientation, parsedWidth, parsedHeight, coverageTable]);
+
+  const deviationLabel = preview
+    ? formatDimensionDeviationLabel(
+        orientation,
+        computeDimensionDeviationCm(
           orientation,
-          computeDimensionDeviationCm(orientation, parsedWidth, parsedHeight, openingWidthCm, openingHeightCm),
-        )
-      : null;
+          preview.actualWidthCm,
+          preview.actualHeightCm,
+          openingWidthCm,
+          openingHeightCm,
+        ),
+      )
+    : null;
 
   return (
     <form action={action} className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -140,9 +170,16 @@ export function AddModuleForm({
           Dodaj moduł
         </button>
       </div>
-      {deviationLabel && (
+      {preview && (
         <div className="sm:col-span-3 lg:col-span-6 text-xs text-neutral-500">
-          Moduł będzie {deviationLabel} ({orientation === "POZIOMO" ? "wysokość otworu" : "szerokość otworu"}{" "}
+          Lamele mają sztywny skok - ten moduł faktycznie wyjdzie{" "}
+          <span className="font-medium text-neutral-700">
+            {round1(preview.actualWidthCm)}×{round1(preview.actualHeightCm)} cm
+          </span>
+          {orientation === "POZIOMO"
+            ? ` (wpisano wysokość ${heightCm} cm)`
+            : ` (wpisano szerokość ${widthCm} cm)`}
+          . Będzie {deviationLabel} ({orientation === "POZIOMO" ? "wysokość otworu" : "szerokość otworu"}{" "}
           {orientation === "POZIOMO" ? openingHeightCm : openingWidthCm} cm).
         </div>
       )}

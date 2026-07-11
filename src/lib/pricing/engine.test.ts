@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  computeActualStackDimCm,
   computeModuleCost,
   computeOpeningSlidingRailCost,
   findCoverageRow,
@@ -184,6 +185,63 @@ describe("computeModuleCost - moduł stały 140x220 (benchmark klienta)", () => 
         catalog,
       ),
     ).toThrow(PricingError);
+  });
+});
+
+describe("computeActualStackDimCm", () => {
+  const table = buildTestCatalog().coverageTable;
+
+  it("rzeczywisty wymiar wynika ze sztywnego skoku lameli, nie z wpisanej wartości", () => {
+    // wpisano 220 -> potrzebne pokrycie 208.5 -> zaokrąglone w górę do wiersza
+    // 211.8 (22 lamele) -> rzeczywista wysokość = 211.8 + 3.5 + 8 = 223.3
+    const { actualStackDimCm, coverageRow } = computeActualStackDimCm("POZIOMO", 220, table);
+    expect(coverageRow.lamelCount).toBe(22);
+    expect(actualStackDimCm).toBeCloseTo(223.3, 2);
+  });
+
+  it("rzuca błąd gdy wpisany wymiar jest za mały na ramę i luz", () => {
+    expect(() => computeActualStackDimCm("POZIOMO", 10, table)).toThrow(PricingError);
+  });
+});
+
+describe("computeModuleCost - rzeczywisty wymiar steruje doborem profilu ramy", () => {
+  const catalog = buildTestCatalog();
+
+  it("moduł 140x219 POZIOMO: rzeczywista wysokość (223.3) wymaga profilu 240, mimo że wpisane 219 mieściłoby się w 220", () => {
+    const result = computeModuleCost(
+      {
+        type: "STALY",
+        widthCm: 140,
+        heightCm: 219,
+        orientation: "POZIOMO",
+        finish: "MALOWANA_RAL",
+        okucieMaterial: "PLASTIKOWE",
+      },
+      catalog,
+    );
+
+    expect(result.actualHeightCm).toBeCloseTo(223.3, 2);
+    expect(result.actualWidthCm).toBe(140);
+    // Gdyby dobór profilu opierał się na wpisanym 219 cm, wyszłoby 220 cm -
+    // za krótko na realnie złożony moduł o wysokości 223.3 cm.
+    expect(result.frameHeightProfileLengthCm).toBe(240);
+  });
+
+  it("wymiar niesterujący (wzdłuż cięcia lameli) pozostaje dokładnie taki, jak wpisano", () => {
+    const result = computeModuleCost(
+      {
+        type: "STALY",
+        widthCm: 140,
+        heightCm: 220,
+        orientation: "PIONOWO",
+        finish: "MALOWANA_RAL",
+        okucieMaterial: "PLASTIKOWE",
+      },
+      catalog,
+    );
+
+    expect(result.actualHeightCm).toBe(220);
+    expect(result.actualWidthCm).not.toBe(140);
   });
 });
 

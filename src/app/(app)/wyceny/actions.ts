@@ -61,6 +61,8 @@ export async function duplicateQuote(formData: FormData) {
           type: m.type,
           widthCm: m.widthCm,
           heightCm: m.heightCm,
+          actualWidthCm: m.actualWidthCm,
+          actualHeightCm: m.actualHeightCm,
           orientation: m.orientation,
           finish: m.finish,
           ralColor: m.ralColor,

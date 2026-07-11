@@ -102,6 +102,8 @@ export interface PdfModuleLine {
   type: "STALY" | "JEZDNY";
   widthCm: number;
   heightCm: number;
+  actualWidthCm: number;
+  actualHeightCm: number;
   orientation: "POZIOMO" | "PIONOWO";
   finish: "MALOWANA_RAL" | "DREWNOPODOBNA";
   ralColor: string | null;
@@ -217,15 +219,20 @@ export function QuoteDocument({
                   </Text>
                   <View style={styles.colDim}>
                     <Text style={styles.cell}>
-                      {m.widthCm}×{m.heightCm} cm
+                      {m.actualWidthCm}×{m.actualHeightCm} cm
                     </Text>
+                    {(m.actualWidthCm !== m.widthCm || m.actualHeightCm !== m.heightCm) && (
+                      <Text style={styles.cellSub}>
+                        wpisano {m.widthCm}×{m.heightCm} cm
+                      </Text>
+                    )}
                     <Text style={styles.cellSub}>
                       {formatDimensionDeviationLabel(
                         m.orientation,
                         computeDimensionDeviationCm(
                           m.orientation,
-                          m.widthCm,
-                          m.heightCm,
+                          m.actualWidthCm,
+                          m.actualHeightCm,
                           opening.widthCm,
                           opening.heightCm,
                         ),
