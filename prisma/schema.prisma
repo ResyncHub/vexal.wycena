@@ -209,6 +209,10 @@ model QuoteModule {
   type                       ModuleType
   widthCm                    Decimal           @db.Decimal(6, 1)
   heightCm                   Decimal           @db.Decimal(6, 1)
+  // Rzeczywisty, fizycznie budowany wymiar (<= widthCm/heightCm - lamela ma
+  // sztywną wysokość, więc moduł nie zawsze trafia dokładnie w żądany rozmiar).
+  actualWidthCm              Decimal           @db.Decimal(6, 1)
+  actualHeightCm             Decimal           @db.Decimal(6, 1)
   orientation                LamelaOrientation
   finish                     LamelaFinish
   ralColor                   String?

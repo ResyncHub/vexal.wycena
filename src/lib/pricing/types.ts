@@ -43,6 +43,10 @@ export interface ModuleCostResult {
   uchwytSets: number;
   frameWidthProfileLengthCm: number;
   frameHeightProfileLengthCm: number;
+  /** Rzeczywisty, fizycznie budowany wymiar (<= żądanego widthCm/heightCm -
+   * lamela ma sztywną wysokość, więc moduł nie zawsze trafia dokładnie). */
+  actualWidthCm: number;
+  actualHeightCm: number;
   lines: ModuleCostLine[];
   costNetPln: number;
 }

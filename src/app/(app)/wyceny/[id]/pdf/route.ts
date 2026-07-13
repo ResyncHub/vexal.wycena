@@ -35,8 +35,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       itemsSubtotalPln += valuePln;
       return {
         type: m.type,
-        widthCm: toNumber(m.widthCm),
-        heightCm: toNumber(m.heightCm),
+        widthCm: toNumber(m.actualWidthCm),
+        heightCm: toNumber(m.actualHeightCm),
         orientation: m.orientation,
         finish: m.finish,
         ralColor: m.ralColor,

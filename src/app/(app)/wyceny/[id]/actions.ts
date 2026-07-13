@@ -82,6 +82,8 @@ export async function addModule(quoteId: string, openingId: string, formData: Fo
       type,
       widthCm,
       heightCm,
+      actualWidthCm: result.actualWidthCm,
+      actualHeightCm: result.actualHeightCm,
       orientation,
       finish,
       ralColor,

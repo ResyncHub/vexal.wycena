@@ -16,22 +16,25 @@ export const FRAME_PROFILE_WIDTH_CM = 4;
 
 export class PricingError extends Error {}
 
-/** Zaokrąglenie "w górę" wg tabeli producenta: najmniejszy wiersz z
- * coverageCm >= potrzebne pokrycie (dopuszcza dokładne trafienie). */
+/** Lamela ma sztywną wysokość - liczba lameli w module rośnie skokowo, nie
+ * płynnie, więc nie da się trafić w dowolny wymiar dokładnie. Moduł musi
+ * fizycznie zmieścić się w otworze, więc dobieramy NAJWIĘKSZY wiersz z
+ * coverageCm <= dostępne miejsce (zaokrąglenie w dół) - budowany moduł
+ * wychodzi zawsze mniejszy lub równy żądanemu wymiarowi, nigdy większy. */
 export function findCoverageRow(
   orientation: LamelaOrientation,
-  neededCoverageCm: number,
+  maxCoverageCm: number,
   table: CoverageRow[],
 ): CoverageRow {
   const candidates = table
     .filter((r) => r.orientation === orientation)
-    .sort((a, b) => a.coverageCm - b.coverageCm);
+    .sort((a, b) => b.coverageCm - a.coverageCm);
 
-  const row = candidates.find((r) => r.coverageCm >= neededCoverageCm);
+  const row = candidates.find((r) => r.coverageCm <= maxCoverageCm);
   if (!row) {
-    const max = candidates.at(-1)?.coverageCm ?? 0;
+    const min = candidates.at(-1)?.coverageCm ?? 0;
     throw new PricingError(
-      `Potrzebne pokrycie ${neededCoverageCm.toFixed(1)} cm przekracza maksimum dostępne w tabeli (${max} cm). Podziel otwór na więcej modułów.`,
+      `Dostępne miejsce ${maxCoverageCm.toFixed(1)} cm jest mniejsze niż minimalne pokrycie w tabeli (${min} cm) - nawet najmniejszy moduł się nie zmieści.`,
     );
   }
   return row;
@@ -77,13 +80,19 @@ export function computeModuleCost(
   const stackDimCm = orientation === "POZIOMO" ? heightCm : widthCm;
   const lamelDimCm = orientation === "POZIOMO" ? widthCm : heightCm;
 
-  const neededCoverageCm = stackDimCm - FRAME_LUZ_CM - 2 * FRAME_PROFILE_WIDTH_CM;
-  if (neededCoverageCm <= 0) {
+  const maxCoverageCm = stackDimCm - FRAME_LUZ_CM - 2 * FRAME_PROFILE_WIDTH_CM;
+  if (maxCoverageCm <= 0) {
     throw new PricingError(
       `Wymiar ${stackDimCm} cm jest za mały, aby zmieścić ramę i luz montażowy.`,
     );
   }
-  const coverageRow = findCoverageRow(orientation, neededCoverageCm, catalog.coverageTable);
+  const coverageRow = findCoverageRow(orientation, maxCoverageCm, catalog.coverageTable);
+  // Rzeczywisty, fizycznie budowany wymiar w kierunku "od liczby lameli" -
+  // z racji skokowego wzrostu co lamelę będzie <= żądanemu wymiarowi. Rama
+  // musi być dopasowana do tego, co faktycznie powstanie, nie do życzenia.
+  const actualStackDimCm = round2(coverageRow.coverageCm + FRAME_LUZ_CM + 2 * FRAME_PROFILE_WIDTH_CM);
+  const actualWidthCm = orientation === "POZIOMO" ? widthCm : actualStackDimCm;
+  const actualHeightCm = orientation === "POZIOMO" ? actualStackDimCm : heightCm;
 
   const neededLamelLengthCm = lamelDimCm - 2 * FRAME_PROFILE_WIDTH_CM;
   if (neededLamelLengthCm <= 0) {
@@ -95,8 +104,8 @@ export function computeModuleCost(
   const lamelLengthCm = pickStrictlyGreaterLength(neededLamelLengthCm, lamelPrices);
   const lamelUnitPrice = priceForLength(lamelPrices, lamelLengthCm);
 
-  const frameWidthProfileLengthCm = pickStrictlyGreaterLength(widthCm, catalog.framePrices);
-  const frameHeightProfileLengthCm = pickStrictlyGreaterLength(heightCm, catalog.framePrices);
+  const frameWidthProfileLengthCm = pickStrictlyGreaterLength(actualWidthCm, catalog.framePrices);
+  const frameHeightProfileLengthCm = pickStrictlyGreaterLength(actualHeightCm, catalog.framePrices);
   const frameWidthPrice = priceForLength(catalog.framePrices, frameWidthProfileLengthCm);
   const frameHeightPrice = priceForLength(catalog.framePrices, frameHeightProfileLengthCm);
 
@@ -152,6 +161,8 @@ export function computeModuleCost(
     uchwytSets: coverageRow.uchwytSets,
     frameWidthProfileLengthCm,
     frameHeightProfileLengthCm,
+    actualWidthCm,
+    actualHeightCm,
     lines,
     costNetPln,
   };

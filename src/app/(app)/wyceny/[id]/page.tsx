@@ -218,7 +218,17 @@ export default async function QuoteDetailPage({
                           {m.type === "JEZDNY" ? "Jezdny" : "Stały"}
                         </td>
                         <td className="py-1.5 text-neutral-700">
-                          {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
+                          {toNumber(m.actualWidthCm)}×{toNumber(m.actualHeightCm)} cm
+                          {(toNumber(m.actualWidthCm) !== toNumber(m.widthCm) ||
+                            toNumber(m.actualHeightCm) !== toNumber(m.heightCm)) && (
+                            <div className="text-xs text-neutral-400">
+                              otwór {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
+                              {toNumber(m.actualWidthCm) !== toNumber(m.widthCm) &&
+                                ` · o ${fmt(toNumber(m.widthCm) - toNumber(m.actualWidthCm))} cm węższy`}
+                              {toNumber(m.actualHeightCm) !== toNumber(m.heightCm) &&
+                                ` · o ${fmt(toNumber(m.heightCm) - toNumber(m.actualHeightCm))} cm niższy`}
+                            </div>
+                          )}
                         </td>
                         <td className="py-1.5 text-neutral-700">
                           {m.orientation === "POZIOMO" ? "poziome" : "pionowe"}
@@ -253,6 +263,11 @@ export default async function QuoteDetailPage({
                 <summary className="cursor-pointer text-sm font-medium text-neutral-700">
                   + Dodaj moduł
                 </summary>
+                <p className="mt-2 text-xs text-neutral-500">
+                  Podaj wymiary otworu do zabudowy. Lamela ma sztywną wysokość, więc gotowy moduł
+                  może wyjść nieco mniejszy niż otwór (nigdy większy) — dokładny rozmiar zobaczysz
+                  po dodaniu.
+                </p>
                 <form action={boundAddModule} className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
                   <div>
                     <label className="mb-1 block text-xs font-medium text-neutral-600">Typ</label>

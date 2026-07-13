@@ -78,28 +78,29 @@ describe("pickStrictlyGreaterLength", () => {
 describe("findCoverageRow", () => {
   const table = buildTestCatalog().coverageTable;
 
-  it("przy dokładnym trafieniu w wartość z tabeli zwraca ten sam wiersz (>=, nie ściśle)", () => {
+  it("przy dokładnym trafieniu w wartość z tabeli zwraca ten sam wiersz (<=, dopuszcza równość)", () => {
     const row = findCoverageRow("POZIOMO", 58.4, table);
     expect(row.lamelCount).toBe(6);
     expect(row.uchwytSets).toBe(1);
   });
 
-  it("zaokrągla w górę do najbliższej wyższej wartości", () => {
+  it("zaokrągla w dół do najbliższej niższej wartości - moduł nie może wyjść większy niż dostępne miejsce", () => {
     const row = findCoverageRow("POZIOMO", 208.5, table);
-    expect(row.coverageCm).toBe(211.8);
-    expect(row.lamelCount).toBe(22);
+    expect(row.coverageCm).toBe(202.2);
+    expect(row.lamelCount).toBe(21);
     expect(row.uchwytSets).toBe(4);
+    expect(row.coverageCm).toBeLessThanOrEqual(208.5);
   });
 
-  it("rzuca błąd gdy potrzebne pokrycie przekracza maksimum tabeli", () => {
-    expect(() => findCoverageRow("POZIOMO", 1000, table)).toThrow(PricingError);
+  it("rzuca błąd gdy dostępne miejsce jest mniejsze niż minimalne pokrycie w tabeli", () => {
+    expect(() => findCoverageRow("POZIOMO", 10, table)).toThrow(PricingError);
   });
 });
 
-describe("computeModuleCost - moduł stały 140x220 (benchmark klienta)", () => {
+describe("computeModuleCost - moduł stały 140x220", () => {
   const catalog = buildTestCatalog();
 
-  it("orientacja POZIOMO: lamele poziome, wysokość steruje liczbą lameli", () => {
+  it("orientacja POZIOMO: wysokość steruje liczbą lameli, rzeczywisty moduł wychodzi niższy niż żądany (nigdy wyższy)", () => {
     const result = computeModuleCost(
       {
         type: "STALY",
@@ -112,17 +113,19 @@ describe("computeModuleCost - moduł stały 140x220 (benchmark klienta)", () => 
       catalog,
     );
 
-    expect(result.lamelCount).toBe(22);
+    expect(result.lamelCount).toBe(21);
     expect(result.lamelLengthCm).toBe(140);
     expect(result.uchwytSets).toBe(4);
-    // Naddatek ścisły: dokładne trafienie 140/220 -> następny większy rozmiar profilu ramy
+    expect(result.actualWidthCm).toBe(140);
+    expect(result.actualHeightCm).toBe(213.7);
+    expect(result.actualHeightCm).toBeLessThanOrEqual(220);
+    // Rama dopasowana do rzeczywistego (mniejszego) wymiaru, nie do żądanego
     expect(result.frameWidthProfileLengthCm).toBe(160);
-    expect(result.frameHeightProfileLengthCm).toBe(240);
-    expect(result.costNetPln).toBeCloseTo(2060.88, 2);
-    expect(netToGrossCost(result.costNetPln)).toBeCloseTo(2534.88, 2);
+    expect(result.frameHeightProfileLengthCm).toBe(220);
+    expect(result.costNetPln).toBeCloseTo(1976.11, 2);
   });
 
-  it("orientacja PIONOWO: lamele pionowe, szerokość steruje liczbą lameli, ale koszt lameli wychodzi porównywalny", () => {
+  it("orientacja PIONOWO: szerokość steruje liczbą lameli, rzeczywisty moduł wychodzi węższy niż żądany (nigdy szerszy)", () => {
     const result = computeModuleCost(
       {
         type: "STALY",
@@ -135,11 +138,11 @@ describe("computeModuleCost - moduł stały 140x220 (benchmark klienta)", () => 
       catalog,
     );
 
-    expect(result.lamelCount).toBe(14);
+    expect(result.lamelCount).toBe(13);
     expect(result.lamelLengthCm).toBe(220);
     expect(result.uchwytSets).toBe(3);
-    // Mniej zestawów okuć w tej orientacji -> taniej niż POZIOMO dla tego wymiaru
-    expect(result.costNetPln).toBeLessThan(2060.88);
+    expect(result.actualHeightCm).toBe(220);
+    expect(result.actualWidthCm).toBeLessThanOrEqual(140);
   });
 
   it("moduł jezdny dolicza wózek i dwie rolki prowadzące", () => {
