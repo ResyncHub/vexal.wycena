@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
@@ -39,6 +40,18 @@ const TYPE_OPTIONS = [
 
 function fmt(n: number) {
   return n.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+interface CostBreakdownLine {
+  label: string;
+  quantity: number;
+  unitPriceNetPln: number;
+  totalNetPln: number;
+}
+
+function parseCostBreakdown(json: unknown): CostBreakdownLine[] {
+  if (!Array.isArray(json)) return [];
+  return json as CostBreakdownLine[];
 }
 
 function toDateInputValue(date: Date | null): string {
@@ -214,49 +227,84 @@ export default async function QuoteDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {opening.modules.map((m) => (
-                      <tr key={m.id} className="border-t border-neutral-100">
-                        <td className="py-1.5 text-neutral-700">
-                          {m.type === "JEZDNY" ? "Jezdny" : "Stały"}
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {toNumber(m.actualWidthCm)}×{toNumber(m.actualHeightCm)} cm
-                          {(toNumber(m.actualWidthCm) !== toNumber(m.widthCm) ||
-                            toNumber(m.actualHeightCm) !== toNumber(m.heightCm)) && (
-                            <div className="text-xs text-neutral-400">
-                              otwór {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
-                              {toNumber(m.actualWidthCm) !== toNumber(m.widthCm) &&
-                                ` · o ${fmt(toNumber(m.widthCm) - toNumber(m.actualWidthCm))} cm węższy`}
-                              {toNumber(m.actualHeightCm) !== toNumber(m.heightCm) &&
-                                ` · o ${fmt(toNumber(m.heightCm) - toNumber(m.actualHeightCm))} cm niższy`}
-                            </div>
+                    {opening.modules.map((m) => {
+                      const breakdown = parseCostBreakdown(m.costBreakdownJson);
+                      return (
+                        <Fragment key={m.id}>
+                          <tr className="border-t border-neutral-100">
+                            <td className="py-1.5 text-neutral-700">
+                              {m.type === "JEZDNY" ? "Jezdny" : "Stały"}
+                            </td>
+                            <td className="py-1.5 text-neutral-700">
+                              {toNumber(m.actualWidthCm)}×{toNumber(m.actualHeightCm)} cm
+                              {(toNumber(m.actualWidthCm) !== toNumber(m.widthCm) ||
+                                toNumber(m.actualHeightCm) !== toNumber(m.heightCm)) && (
+                                <div className="text-xs text-neutral-400">
+                                  otwór {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
+                                  {toNumber(m.actualWidthCm) !== toNumber(m.widthCm) &&
+                                    ` · o ${fmt(toNumber(m.widthCm) - toNumber(m.actualWidthCm))} cm węższy`}
+                                  {toNumber(m.actualHeightCm) !== toNumber(m.heightCm) &&
+                                    ` · o ${fmt(toNumber(m.heightCm) - toNumber(m.actualHeightCm))} cm niższy`}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-1.5 text-neutral-700">
+                              {m.orientation === "POZIOMO" ? "poziome" : "pionowe"}
+                            </td>
+                            <td className="py-1.5 text-neutral-700">
+                              {m.finish === "MALOWANA_RAL" ? "RAL" : "drewnopodobna"}
+                              {m.ralColor ? ` (${m.ralColor})` : ""}
+                            </td>
+                            <td className="py-1.5 text-neutral-700">
+                              {m.lamelCount}× {m.lamelLengthCm} cm
+                            </td>
+                            <td className="py-1.5 text-neutral-700">
+                              {m.uchwytSets}× {m.okucieMaterial === "ALUMINIOWE" ? "alu" : "plastik"}
+                            </td>
+                            <td className="py-1.5 font-medium text-neutral-900">
+                              {fmt(toNumber(m.costNetPln))} zł
+                            </td>
+                            <td className="py-1.5 text-right">
+                              <form action={boundDeleteModule.bind(null, m.id)}>
+                                <button type="submit" className="text-red-600 hover:underline">
+                                  Usuń
+                                </button>
+                              </form>
+                            </td>
+                          </tr>
+                          {breakdown.length > 0 && (
+                            <tr className="bg-neutral-50">
+                              <td></td>
+                              <td colSpan={7} className="py-2">
+                                <table className="w-full max-w-lg text-xs">
+                                  <tbody>
+                                    {breakdown.map((line, i) => (
+                                      <tr key={i}>
+                                        <td className="py-0.5 pr-3 text-neutral-500">{line.label}</td>
+                                        <td className="py-0.5 pr-3 text-neutral-500">
+                                          {line.quantity}× {fmt(line.unitPriceNetPln)} zł
+                                        </td>
+                                        <td className="py-0.5 text-right text-neutral-600">
+                                          {fmt(line.totalNetPln)} zł netto
+                                        </td>
+                                      </tr>
+                                    ))}
+                                    <tr className="border-t border-neutral-200 font-medium">
+                                      <td className="py-0.5 pr-3 text-neutral-700" colSpan={2}>
+                                        Razem netto (koszt dostawcy)
+                                      </td>
+                                      <td className="py-0.5 text-right text-neutral-800">
+                                        {fmt(toNumber(m.costNetPln))} zł
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {m.orientation === "POZIOMO" ? "poziome" : "pionowe"}
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {m.finish === "MALOWANA_RAL" ? "RAL" : "drewnopodobna"}
-                          {m.ralColor ? ` (${m.ralColor})` : ""}
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {m.lamelCount}× {m.lamelLengthCm} cm
-                        </td>
-                        <td className="py-1.5 text-neutral-700">
-                          {m.uchwytSets}× {m.okucieMaterial === "ALUMINIOWE" ? "alu" : "plastik"}
-                        </td>
-                        <td className="py-1.5 font-medium text-neutral-900">
-                          {fmt(toNumber(m.costNetPln))} zł
-                        </td>
-                        <td className="py-1.5 text-right">
-                          <form action={boundDeleteModule.bind(null, m.id)}>
-                            <button type="submit" className="text-red-600 hover:underline">
-                              Usuń
-                            </button>
-                          </form>
-                        </td>
-                      </tr>
-                    ))}
+                        </Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
