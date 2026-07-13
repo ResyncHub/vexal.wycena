@@ -107,6 +107,7 @@ export interface PdfModuleLine {
 export interface PdfOpening {
   label: string;
   widthCm: number;
+  heightCm: number;
   modules: PdfModuleLine[];
   slidingRailValuePln: number | null;
 }
@@ -194,7 +195,7 @@ export function QuoteDocument({
         {openings.map((opening, i) => (
           <View key={i} wrap={false}>
             <Text style={styles.openingTitle}>
-              {opening.label} (szerokość otworu {opening.widthCm} cm)
+              {opening.label} (otwór {opening.widthCm}×{opening.heightCm} cm)
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeaderRow}>

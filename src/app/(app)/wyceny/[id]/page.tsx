@@ -181,7 +181,9 @@ export default async function QuoteDetailPage({
                 <div>
                   <h3 className="font-medium text-neutral-900">
                     {opening.label}{" "}
-                    <span className="text-neutral-400">· szerokość otworu {toNumber(opening.widthCm)} cm</span>
+                    <span className="text-neutral-400">
+                      · otwór {toNumber(opening.widthCm)}×{toNumber(opening.heightCm)} cm
+                    </span>
                   </h3>
                   {hasSliding && (
                     <p className="mt-1 text-sm text-neutral-500">
@@ -284,6 +286,7 @@ export default async function QuoteDetailPage({
                     <input
                       name="widthCm"
                       required
+                      defaultValue={toNumber(opening.widthCm)}
                       className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
                     />
                   </div>
@@ -292,6 +295,7 @@ export default async function QuoteDetailPage({
                     <input
                       name="heightCm"
                       required
+                      defaultValue={toNumber(opening.heightCm)}
                       className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
                     />
                   </div>
@@ -369,9 +373,15 @@ export default async function QuoteDetailPage({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-neutral-600">
-                Szerokość całego otworu (cm)
+                Szerokość otworu (cm)
               </label>
               <input name="widthCm" required className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-neutral-600">
+                Wysokość otworu (cm)
+              </label>
+              <input name="heightCm" required className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm" />
             </div>
             <button
               type="submit"

@@ -54,6 +54,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return {
       label: opening.label,
       widthCm: toNumber(opening.widthCm),
+      heightCm: toNumber(opening.heightCm),
       modules,
       slidingRailValuePln,
     };
