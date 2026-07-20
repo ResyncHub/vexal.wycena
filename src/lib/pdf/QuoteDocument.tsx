@@ -194,9 +194,7 @@ export function QuoteDocument({
 
         {openings.map((opening, i) => (
           <View key={i} wrap={false}>
-            <Text style={styles.openingTitle}>
-              {opening.label} (otwór {opening.widthCm}×{opening.heightCm} cm)
-            </Text>
+            <Text style={styles.openingTitle}>{opening.label}</Text>
             <View style={styles.table}>
               <View style={styles.tableHeaderRow}>
                 <Text style={[styles.headerCell, styles.colDesc]}>Opis</Text>
