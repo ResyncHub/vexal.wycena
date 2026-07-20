@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { toNumber } from "@/lib/decimal";
 import { computeOpeningSlidingRailCost, netToGrossCost, round2 } from "./engine";
 import { loadPriceCatalog } from "./catalog";
@@ -20,6 +21,7 @@ export async function recalculateOpeningRail(openingId: string) {
         slidingTopProfileLengthCm: null,
         slidingBottomProfileLengthCm: null,
         slidingRailCostNetPln: 0,
+        railBreakdownJson: Prisma.JsonNull,
       },
     });
   } else {
@@ -31,6 +33,7 @@ export async function recalculateOpeningRail(openingId: string) {
         slidingTopProfileLengthCm: rail.topProfileLengthCm,
         slidingBottomProfileLengthCm: rail.bottomProfileLengthCm,
         slidingRailCostNetPln: rail.costNetPln,
+        railBreakdownJson: JSON.parse(JSON.stringify(rail.lines)),
       },
     });
   }

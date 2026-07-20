@@ -198,12 +198,6 @@ export default async function QuoteDetailPage({
                       · otwór {toNumber(opening.widthCm)}×{toNumber(opening.heightCm)} cm
                     </span>
                   </h3>
-                  {hasSliding && (
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Szyna górna {opening.slidingTopProfileLengthCm} cm, prowadnica dolna{" "}
-                      {opening.slidingBottomProfileLengthCm} cm — {fmt(toNumber(opening.slidingRailCostNetPln))} zł netto
-                    </p>
-                  )}
                 </div>
                 <form action={boundDeleteOpening.bind(null, opening.id)}>
                   <button type="submit" className="text-sm text-red-600 hover:underline">
@@ -211,6 +205,37 @@ export default async function QuoteDetailPage({
                   </button>
                 </form>
               </div>
+
+              {hasSliding && (
+                <div className="mb-4 rounded-md border border-blue-100 bg-blue-50 p-3">
+                  <p className="mb-1.5 text-xs font-medium uppercase text-blue-700">
+                    Wspólne dla otworu (jeden komplet na cały otwór, niezależnie od liczby modułów jezdnych)
+                  </p>
+                  <table className="w-full max-w-lg text-xs">
+                    <tbody>
+                      {parseCostBreakdown(opening.railBreakdownJson).map((line, i) => (
+                        <tr key={i}>
+                          <td className="py-0.5 pr-3 text-neutral-600">{line.label}</td>
+                          <td className="py-0.5 pr-3 text-neutral-600">
+                            {line.quantity}× {fmt(line.unitPriceNetPln)} zł
+                          </td>
+                          <td className="py-0.5 text-right text-neutral-700">
+                            {fmt(line.totalNetPln)} zł netto
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="border-t border-blue-200 font-medium">
+                        <td className="py-0.5 pr-3 text-neutral-800" colSpan={2}>
+                          Razem netto (szyna + prowadnica)
+                        </td>
+                        <td className="py-0.5 text-right text-neutral-900">
+                          {fmt(toNumber(opening.slidingRailCostNetPln))} zł
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               {opening.modules.length > 0 && (
                 <table className="mb-4 w-full text-sm">

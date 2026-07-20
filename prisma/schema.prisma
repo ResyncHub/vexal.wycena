@@ -192,6 +192,7 @@ model QuoteOpening {
   slidingTopProfileLengthCm    Int?
   slidingBottomProfileLengthCm Int?
   slidingRailCostNetPln        Decimal  @default(0) @db.Decimal(10, 2)
+  railBreakdownJson            Json?
   createdAt                    DateTime @default(now())
 
   modules QuoteModule[]
