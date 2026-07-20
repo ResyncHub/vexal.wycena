@@ -23,7 +23,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!quote) notFound();
 
   const company = await db.companySettings.findUnique({ where: { id: "singleton" } });
-  const markupPercent = company ? toNumber(company.defaultMarkupPercent) : 0;
+  const markupPercent = toNumber(quote.markupPercent);
 
   const lineValue = (costNetPln: number) =>
     round2(netToGrossCost(costNetPln) * (1 + markupPercent / 100));
@@ -35,8 +35,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       itemsSubtotalPln += valuePln;
       return {
         type: m.type,
-        widthCm: toNumber(m.actualWidthCm),
-        heightCm: toNumber(m.actualHeightCm),
+        widthCm: toNumber(m.displayWidthCm ?? m.actualWidthCm),
+        heightCm: toNumber(m.displayHeightCm ?? m.actualHeightCm),
         orientation: m.orientation,
         finish: m.finish,
         ralColor: m.ralColor,

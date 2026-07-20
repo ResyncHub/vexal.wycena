@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/decimal";
+import { round2 } from "@/lib/pricing/engine";
 import {
   addModule,
   addOpening,
   deleteModule,
   deleteOpening,
+  updateModuleDisplayDimensions,
   updateQuoteHeader,
 } from "./actions";
 
@@ -145,6 +147,14 @@ export default async function QuoteDetailPage({
             />
           </div>
           <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-700">Marża (%)</label>
+            <input
+              name="markupPercent"
+              defaultValue={toNumber(quote.markupPercent)}
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
             <label className="mb-1 block text-sm font-medium text-neutral-700">Rabat (%)</label>
             <input
               name="discountPercent"
@@ -254,6 +264,14 @@ export default async function QuoteDetailPage({
                   <tbody>
                     {opening.modules.map((m) => {
                       const breakdown = parseCostBreakdown(m.costBreakdownJson);
+                      const boundUpdateDisplayDims = updateModuleDisplayDimensions.bind(
+                        null,
+                        quote.id,
+                        m.id,
+                      );
+                      const hasDisplayOverride = m.displayWidthCm !== null || m.displayHeightCm !== null;
+                      const shownWidthCm = toNumber(m.displayWidthCm ?? m.actualWidthCm);
+                      const shownHeightCm = toNumber(m.displayHeightCm ?? m.actualHeightCm);
                       return (
                         <Fragment key={m.id}>
                           <tr className="border-t border-neutral-100">
@@ -261,17 +279,49 @@ export default async function QuoteDetailPage({
                               {m.type === "JEZDNY" ? "Jezdny" : "Stały"}
                             </td>
                             <td className="py-1.5 text-neutral-700">
-                              {toNumber(m.actualWidthCm)}×{toNumber(m.actualHeightCm)} cm
-                              {(toNumber(m.actualWidthCm) !== toNumber(m.widthCm) ||
-                                toNumber(m.actualHeightCm) !== toNumber(m.heightCm)) && (
-                                <div className="text-xs text-neutral-400">
-                                  otwór {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
-                                  {toNumber(m.actualWidthCm) !== toNumber(m.widthCm) &&
-                                    ` · o ${fmt(toNumber(m.widthCm) - toNumber(m.actualWidthCm))} cm węższy`}
-                                  {toNumber(m.actualHeightCm) !== toNumber(m.heightCm) &&
-                                    ` · o ${fmt(toNumber(m.heightCm) - toNumber(m.actualHeightCm))} cm niższy`}
+                              {shownWidthCm}×{shownHeightCm} cm
+                              {hasDisplayOverride ? (
+                                <div className="text-xs text-amber-600">
+                                  nadpisane do podglądu · rzeczywisty {toNumber(m.actualWidthCm)}×
+                                  {toNumber(m.actualHeightCm)} cm
                                 </div>
+                              ) : (
+                                (toNumber(m.actualWidthCm) !== toNumber(m.widthCm) ||
+                                  toNumber(m.actualHeightCm) !== toNumber(m.heightCm)) && (
+                                  <div className="text-xs text-neutral-400">
+                                    otwór {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
+                                    {toNumber(m.actualWidthCm) !== toNumber(m.widthCm) &&
+                                      ` · o ${fmt(toNumber(m.widthCm) - toNumber(m.actualWidthCm))} cm węższy`}
+                                    {toNumber(m.actualHeightCm) !== toNumber(m.heightCm) &&
+                                      ` · o ${fmt(toNumber(m.heightCm) - toNumber(m.actualHeightCm))} cm niższy`}
+                                  </div>
+                                )
                               )}
+                              <details className="mt-1">
+                                <summary className="cursor-pointer text-xs text-blue-600">
+                                  Wymiary do podglądu
+                                </summary>
+                                <form
+                                  action={boundUpdateDisplayDims}
+                                  className="mt-1 flex flex-wrap items-center gap-1"
+                                >
+                                  <input
+                                    name="displayWidthCm"
+                                    defaultValue={m.displayWidthCm ? toNumber(m.displayWidthCm) : ""}
+                                    placeholder="szer."
+                                    className="w-16 rounded border border-neutral-300 px-1 py-0.5 text-xs"
+                                  />
+                                  <input
+                                    name="displayHeightCm"
+                                    defaultValue={m.displayHeightCm ? toNumber(m.displayHeightCm) : ""}
+                                    placeholder="wys."
+                                    className="w-16 rounded border border-neutral-300 px-1 py-0.5 text-xs"
+                                  />
+                                  <button type="submit" className="text-xs text-blue-600 underline">
+                                    Zapisz
+                                  </button>
+                                </form>
+                              </details>
                             </td>
                             <td className="py-1.5 text-neutral-700">
                               {m.orientation === "POZIOMO" ? "poziome" : "pionowe"}
@@ -468,16 +518,47 @@ export default async function QuoteDetailPage({
 
       <section className="rounded-lg border border-neutral-200 bg-white p-6">
         <h2 className="mb-3 text-lg font-semibold text-neutral-900">Podsumowanie</h2>
-        <dl className="grid max-w-sm gap-2 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-neutral-600">Koszt materiału (brutto)</dt>
-            <dd className="text-neutral-900">{fmt(toNumber(quote.totalCostPln))} zł</dd>
-          </div>
-          <div className="flex justify-between border-t border-neutral-200 pt-2 text-base font-semibold">
-            <dt className="text-neutral-900">Cena dla klienta</dt>
-            <dd className="text-neutral-900">{fmt(toNumber(quote.totalPricePln))} zł</dd>
-          </div>
-        </dl>
+        {(() => {
+          const costGrossPln = toNumber(quote.totalCostPln);
+          const markupPercent = toNumber(quote.markupPercent);
+          const withMarkup = round2(costGrossPln * (1 + markupPercent / 100));
+          const installationPln = toNumber(quote.installationPln);
+          const withInstallation = round2(withMarkup + installationPln);
+          const discountPercent = toNumber(quote.discountPercent);
+
+          return (
+            <dl className="grid max-w-sm gap-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-neutral-600">Koszt materiału (brutto)</dt>
+                <dd className="text-neutral-900">{fmt(costGrossPln)} zł</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-neutral-600">Marża ({fmt(markupPercent)}%)</dt>
+                <dd className="text-neutral-900">
+                  {fmt(round2(withMarkup - costGrossPln))} zł
+                </dd>
+              </div>
+              {installationPln > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-neutral-600">Montaż</dt>
+                  <dd className="text-neutral-900">{fmt(installationPln)} zł</dd>
+                </div>
+              )}
+              {discountPercent > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-neutral-600">Rabat ({fmt(discountPercent)}%)</dt>
+                  <dd className="text-neutral-900">
+                    -{fmt(round2(withInstallation * (discountPercent / 100)))} zł
+                  </dd>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-neutral-200 pt-2 text-base font-semibold">
+                <dt className="text-neutral-900">Cena dla klienta</dt>
+                <dd className="text-neutral-900">{fmt(toNumber(quote.totalPricePln))} zł</dd>
+              </div>
+            </dl>
+          );
+        })()}
       </section>
     </div>
   );

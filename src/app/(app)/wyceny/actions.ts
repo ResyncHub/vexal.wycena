@@ -13,7 +13,7 @@ export async function createQuote() {
   validUntil.setDate(validUntil.getDate() + (settings?.quoteValidityDays ?? 14));
 
   const quote = await db.quote.create({
-    data: { number, validUntil },
+    data: { number, validUntil, markupPercent: settings?.defaultMarkupPercent ?? 0 },
   });
 
   redirect(`/wyceny/${quote.id}`);
@@ -36,6 +36,7 @@ export async function duplicateQuote(formData: FormData) {
       number,
       validUntil,
       clientId: source.clientId,
+      markupPercent: source.markupPercent,
       discountPercent: source.discountPercent,
       installationPln: source.installationPln,
       notes: source.notes,
@@ -63,6 +64,8 @@ export async function duplicateQuote(formData: FormData) {
           heightCm: m.heightCm,
           actualWidthCm: m.actualWidthCm,
           actualHeightCm: m.actualHeightCm,
+          displayWidthCm: m.displayWidthCm,
+          displayHeightCm: m.displayHeightCm,
           orientation: m.orientation,
           finish: m.finish,
           ralColor: m.ralColor,

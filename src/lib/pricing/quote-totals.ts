@@ -60,7 +60,9 @@ export async function recalculateQuoteTotals(quoteId: string) {
   const totalCostNetPln = round2(modulesCostNet + railsCostNet);
   const totalCostGrossPln = netToGrossCost(totalCostNetPln);
 
-  const markupPercent = await getMarkupPercent();
+  // Narzut jest indywidualny dla tej wyceny (edytowalny w kreatorze), nie
+  // globalny - pozwala dostosować marżę do konkretnego klienta.
+  const markupPercent = toNumber(quote.markupPercent);
   const withMarkup = round2(totalCostGrossPln * (1 + markupPercent / 100));
   const withInstallation = round2(withMarkup + toNumber(quote.installationPln));
   const withDiscount = round2(withInstallation * (1 - toNumber(quote.discountPercent) / 100));
@@ -72,9 +74,4 @@ export async function recalculateQuoteTotals(quoteId: string) {
       totalPricePln: withDiscount,
     },
   });
-}
-
-async function getMarkupPercent(): Promise<number> {
-  const settings = await db.companySettings.findUnique({ where: { id: "singleton" } });
-  return settings ? toNumber(settings.defaultMarkupPercent) : 0;
 }

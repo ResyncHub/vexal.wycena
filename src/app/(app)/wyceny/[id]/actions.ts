@@ -22,6 +22,7 @@ export async function updateQuoteHeader(quoteId: string, formData: FormData) {
     data: {
       clientId: clientId || null,
       status: get("status") as "DRAFT" | "SENT" | "ACCEPTED" | "REJECTED",
+      markupPercent: Number(get("markupPercent").replace(",", ".")) || 0,
       discountPercent: Number(get("discountPercent").replace(",", ".")) || 0,
       installationPln: Number(get("installationPln").replace(",", ".")) || 0,
       notes: get("notes") || null,
@@ -109,5 +110,32 @@ export async function addModule(quoteId: string, openingId: string, formData: Fo
 export async function deleteModule(quoteId: string, openingId: string, moduleId: string) {
   await db.quoteModule.delete({ where: { id: moduleId } });
   await recalculateOpeningRail(openingId);
+  revalidatePath(`/wyceny/${quoteId}`);
+}
+
+/** Czysto wizualne nadpisanie wymiarów pokazywanych w podglądzie/PDF - nie
+ * przelicza ceny ani nie zmienia rzeczywistego (actual) wymiaru budowy.
+ * Puste pole = usunięcie nadpisania (wraca do wymiaru rzeczywistego). */
+export async function updateModuleDisplayDimensions(
+  quoteId: string,
+  moduleId: string,
+  formData: FormData,
+) {
+  const get = (key: string) => String(formData.get(key) ?? "").trim();
+
+  const parseOrNull = (raw: string) => {
+    if (!raw) return null;
+    const n = Number(raw.replace(",", "."));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+
+  await db.quoteModule.update({
+    where: { id: moduleId },
+    data: {
+      displayWidthCm: parseOrNull(get("displayWidthCm")),
+      displayHeightCm: parseOrNull(get("displayHeightCm")),
+    },
+  });
+
   revalidatePath(`/wyceny/${quoteId}`);
 }

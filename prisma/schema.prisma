@@ -168,6 +168,9 @@ model Quote {
   clientId        String?
   client          Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
   validUntil      DateTime?
+  // Narzut/marża indywidualna dla tej wyceny (startuje od domyślnej z
+  // ustawień firmy, ale edytowalna osobno dla każdego klienta/wyceny).
+  markupPercent   Decimal     @default(0) @db.Decimal(6, 2)
   discountPercent Decimal     @default(0) @db.Decimal(6, 2)
   installationPln Decimal     @default(0) @db.Decimal(10, 2)
   notes           String?
@@ -215,6 +218,10 @@ model QuoteModule {
   // sztywną wysokość, więc moduł nie zawsze trafia dokładnie w żądany rozmiar).
   actualWidthCm              Decimal           @db.Decimal(6, 1)
   actualHeightCm             Decimal           @db.Decimal(6, 1)
+  // Czysto wizualne nadpisanie wymiarów wyświetlanych w podglądzie/PDF -
+  // nie wpływa na kalkulację ceny ani rzeczywisty (actual) wymiar budowy.
+  displayWidthCm             Decimal?          @db.Decimal(6, 1)
+  displayHeightCm            Decimal?          @db.Decimal(6, 1)
   orientation                LamelaOrientation
   finish                     LamelaFinish
   ralColor                   String?
