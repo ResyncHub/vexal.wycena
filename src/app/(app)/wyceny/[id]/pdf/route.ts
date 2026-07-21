@@ -30,8 +30,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   let itemsSubtotalPln = 0;
   const openings: PdfOpening[] = quote.openings.map((opening) => {
+    // System jezdny (szyna + prowadnica) jest wspólny dla całego otworu, ale
+    // na wycenie klient ma widzieć JEDNĄ cenę za moduł - rozdzielamy więc ten
+    // koszt równo między moduły jezdne w tym otworze zamiast pokazywać go
+    // jako osobną pozycję.
+    const slidingModules = opening.modules.filter((m) => m.type === "JEZDNY");
+    const railValuePln =
+      slidingModules.length > 0 ? lineValue(toNumber(opening.slidingRailCostNetPln)) : 0;
+    const railSharePerModule = slidingModules.length > 0 ? railValuePln / slidingModules.length : 0;
+
     const modules = opening.modules.map((m) => {
-      const valuePln = lineValue(toNumber(m.costNetPln));
+      const isSliding = m.type === "JEZDNY";
+      const valuePln = round2(lineValue(toNumber(m.costNetPln)) + (isSliding ? railSharePerModule : 0));
       itemsSubtotalPln += valuePln;
       return {
         type: m.type,
@@ -42,21 +52,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         ralColor: m.ralColor,
         okucieMaterial: m.okucieMaterial,
         valuePln,
+        hasSlidingSystem: isSliding,
       };
     });
 
-    const hasSliding = opening.modules.some((m) => m.type === "JEZDNY");
-    const slidingRailValuePln = hasSliding
-      ? lineValue(toNumber(opening.slidingRailCostNetPln))
-      : null;
-    if (slidingRailValuePln !== null) itemsSubtotalPln += slidingRailValuePln;
-
     return {
       label: opening.label,
-      widthCm: toNumber(opening.widthCm),
-      heightCm: toNumber(opening.heightCm),
       modules,
-      slidingRailValuePln,
     };
   });
 

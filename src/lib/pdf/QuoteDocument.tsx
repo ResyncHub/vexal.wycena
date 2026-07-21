@@ -12,6 +12,11 @@ Font.register({
   ],
 });
 
+const ACCENT = "#1c2333";
+const ACCENT_SOFT = "#eef0f4";
+const BORDER = "#dfe1e6";
+const MUTED = "#6b7280";
+
 const styles = StyleSheet.create({
   page: {
     padding: 40,
@@ -23,55 +28,89 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 24,
+    marginBottom: 12,
   },
-  logo: { width: 120, maxHeight: 60, objectFit: "contain" },
+  logo: { width: 130, maxHeight: 56, objectFit: "contain" },
   companyBlock: { textAlign: "right" },
-  companyName: { fontSize: 12, fontWeight: "bold", marginBottom: 2 },
-  companyLine: { fontSize: 9, color: "#525252" },
-  title: { fontSize: 18, fontWeight: "bold", marginBottom: 4 },
-  subtitle: { fontSize: 10, color: "#525252", marginBottom: 16 },
-  infoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
-  infoBlock: { width: "48%" },
-  infoLabel: { fontSize: 8, color: "#737373", marginBottom: 2, textTransform: "uppercase" },
-  infoValue: { fontSize: 10, marginBottom: 1 },
-  openingTitle: { fontSize: 11, fontWeight: "bold", marginTop: 16, marginBottom: 6 },
-  table: { borderTopWidth: 1, borderTopColor: "#e5e5e5" },
-  tableHeaderRow: {
-    flexDirection: "row",
-    backgroundColor: "#f5f5f5",
-    paddingVertical: 5,
-    paddingHorizontal: 4,
+  companyName: { fontSize: 13, fontWeight: "bold", marginBottom: 3, color: ACCENT },
+  companyLine: { fontSize: 8.5, color: MUTED },
+  headerRule: { height: 2, backgroundColor: ACCENT, marginBottom: 20 },
+
+  title: { fontSize: 19, fontWeight: "bold", color: ACCENT, marginBottom: 3 },
+  subtitle: { fontSize: 9, color: MUTED, marginBottom: 16 },
+
+  infoRow: { flexDirection: "row", gap: 12, marginBottom: 22 },
+  infoBox: {
+    flex: 1,
+    backgroundColor: ACCENT_SOFT,
+    borderLeftWidth: 3,
+    borderLeftColor: ACCENT,
+    padding: 10,
   },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 5,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e5e5",
+  infoLabel: {
+    fontSize: 7.5,
+    fontWeight: "bold",
+    color: ACCENT,
+    marginBottom: 4,
+    textTransform: "uppercase",
   },
-  colDesc: { width: "46%" },
-  colDim: { width: "18%" },
-  colFinish: { width: "18%" },
-  colValue: { width: "18%", textAlign: "right" },
-  headerCell: { fontSize: 8, fontWeight: "bold", color: "#525252", textTransform: "uppercase" },
-  cell: { fontSize: 9 },
-  summary: { marginTop: 20, alignSelf: "flex-end", width: "50%" },
+  infoName: { fontSize: 10, fontWeight: "bold", marginBottom: 2 },
+  infoValue: { fontSize: 9, color: "#3f3f46", marginBottom: 1, lineHeight: 1.3 },
+
+  sectionLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    gap: 6,
+  },
+  sectionBullet: { width: 6, height: 6, backgroundColor: ACCENT },
+  sectionTitle: { fontSize: 10, fontWeight: "bold", color: ACCENT, textTransform: "uppercase" },
+
+  openingTitle: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#27272a",
+    marginTop: 10,
+    marginBottom: 6,
+  },
+
+  moduleCard: {
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 3,
+    padding: 10,
+    marginBottom: 8,
+  },
+  moduleHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 5,
+  },
+  moduleTitle: { fontSize: 10, fontWeight: "bold" },
+  moduleValue: { fontSize: 12, fontWeight: "bold", color: ACCENT },
+  specLine: { fontSize: 9, color: "#3f3f46", marginBottom: 2, lineHeight: 1.3 },
+  specBullet: { color: MUTED },
+
+  summary: { marginTop: 14, alignSelf: "flex-end", width: "55%" },
   summaryRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 3 },
-  summaryLabel: { fontSize: 9, color: "#525252" },
+  summaryLabel: { fontSize: 9, color: MUTED },
   summaryValue: { fontSize: 9 },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingTop: 6,
-    marginTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: "#171717",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginTop: 6,
+    backgroundColor: ACCENT,
   },
-  totalLabel: { fontSize: 12, fontWeight: "bold" },
-  totalValue: { fontSize: 12, fontWeight: "bold" },
+  totalLabel: { fontSize: 11, fontWeight: "bold", color: "#ffffff" },
+  totalValue: { fontSize: 13, fontWeight: "bold", color: "#ffffff" },
+
   footer: { position: "absolute", bottom: 40, left: 40, right: 40 },
-  footerText: { fontSize: 8, color: "#737373", lineHeight: 1.4 },
+  footerRule: { height: 0.5, backgroundColor: BORDER, marginBottom: 6 },
+  footerText: { fontSize: 8, color: MUTED, lineHeight: 1.4 },
 });
 
 export interface PdfCompany {
@@ -101,15 +140,15 @@ export interface PdfModuleLine {
   finish: "MALOWANA_RAL" | "DREWNOPODOBNA";
   ralColor: string | null;
   okucieMaterial: "ALUMINIOWE" | "PLASTIKOWE";
+  /** Wartość tej pozycji - dla modułów jezdnych zawiera już doliczony
+   * udział we wspólnej szynie/prowadnicy otworu, żeby była jedna cena. */
   valuePln: number;
+  hasSlidingSystem: boolean;
 }
 
 export interface PdfOpening {
   label: string;
-  widthCm: number;
-  heightCm: number;
   modules: PdfModuleLine[];
-  slidingRailValuePln: number | null;
 }
 
 export interface PdfQuote {
@@ -128,8 +167,8 @@ const FINISH_LABEL: Record<string, string> = {
 };
 
 const ORIENTATION_LABEL: Record<string, string> = {
-  POZIOMO: "lamele poziome",
-  PIONOWO: "lamele pionowe",
+  POZIOMO: "poziome",
+  PIONOWO: "pionowe",
 };
 
 function fmt(n: number): string {
@@ -154,6 +193,9 @@ export function QuoteDocument({
   openings: PdfOpening[];
   itemsSubtotalPln: number;
 }) {
+  let counter = 0;
+  const moduleNumbers = openings.map((opening) => opening.modules.map(() => ++counter));
+
   return (
     <Document title={`Wycena ${quote.number}`}>
       <Page size="A4" style={styles.page}>
@@ -172,61 +214,73 @@ export function QuoteDocument({
             {company.email && <Text style={styles.companyLine}>{company.email}</Text>}
           </View>
         </View>
+        <View style={styles.headerRule} />
 
-        <Text style={styles.title}>Wycena {quote.number}</Text>
+        <Text style={styles.title}>WYCENA NR {quote.number}</Text>
         <Text style={styles.subtitle}>
           Data wystawienia: {fmtDate(quote.createdAt)}
-          {quote.validUntil ? `  ·  Ważna do: ${fmtDate(quote.validUntil)}` : ""}
+          {quote.validUntil ? `   ·   Ważna do: ${fmtDate(quote.validUntil)}` : ""}
         </Text>
 
-        {client && (
-          <View style={styles.infoRow}>
-            <View style={styles.infoBlock}>
+        <View style={styles.infoRow}>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Wystawia</Text>
+            <Text style={styles.infoName}>{company.name}</Text>
+            {company.address && <Text style={styles.infoValue}>{company.address}</Text>}
+            {company.nip && <Text style={styles.infoValue}>NIP: {company.nip}</Text>}
+            {company.email && <Text style={styles.infoValue}>{company.email}</Text>}
+          </View>
+          {client && (
+            <View style={styles.infoBox}>
               <Text style={styles.infoLabel}>Dla</Text>
-              <Text style={styles.infoValue}>{client.name}</Text>
+              <Text style={styles.infoName}>{client.name}</Text>
               {client.address && <Text style={styles.infoValue}>{client.address}</Text>}
               {client.nip && <Text style={styles.infoValue}>NIP: {client.nip}</Text>}
               {client.email && <Text style={styles.infoValue}>{client.email}</Text>}
               {client.phone && <Text style={styles.infoValue}>{client.phone}</Text>}
             </View>
-          </View>
-        )}
+          )}
+        </View>
+
+        <View style={styles.sectionLabel}>
+          <View style={styles.sectionBullet} />
+          <Text style={styles.sectionTitle}>Specyfikacja i wycena</Text>
+        </View>
 
         {openings.map((opening, i) => (
           <View key={i} wrap={false}>
             <Text style={styles.openingTitle}>{opening.label}</Text>
-            <View style={styles.table}>
-              <View style={styles.tableHeaderRow}>
-                <Text style={[styles.headerCell, styles.colDesc]}>Opis</Text>
-                <Text style={[styles.headerCell, styles.colDim]}>Wymiary</Text>
-                <Text style={[styles.headerCell, styles.colFinish]}>Wykończenie</Text>
-                <Text style={[styles.headerCell, styles.colValue]}>Wartość</Text>
-              </View>
-              {opening.modules.map((m, j) => (
-                <View key={j} style={styles.tableRow}>
-                  <Text style={[styles.cell, styles.colDesc]}>
-                    {m.type === "JEZDNY" ? "Moduł jezdny (przesuwny)" : "Moduł stały"},{" "}
-                    {ORIENTATION_LABEL[m.orientation]}
+            {opening.modules.map((m, j) => {
+              return (
+                <View key={j} style={styles.moduleCard}>
+                  <View style={styles.moduleHeaderRow}>
+                    <Text style={styles.moduleTitle}>
+                      Moduł {moduleNumbers[i][j]} · {m.type === "JEZDNY" ? "przesuwny" : "stały"}
+                    </Text>
+                    <Text style={styles.moduleValue}>{fmt(m.valuePln)}</Text>
+                  </View>
+                  <Text style={styles.specLine}>
+                    <Text style={styles.specBullet}>Lamele: </Text>
+                    {FINISH_LABEL[m.finish]}
+                    {m.ralColor ? `, ${m.ralColor}` : ""}, ustawienie {ORIENTATION_LABEL[m.orientation]}
                   </Text>
-                  <Text style={[styles.cell, styles.colDim]}>
+                  <Text style={styles.specLine}>
+                    <Text style={styles.specBullet}>Rama i okucia: </Text>
+                    rama aluminiowa, okucia {m.okucieMaterial === "ALUMINIOWE" ? "aluminiowe" : "plastikowe"}
+                  </Text>
+                  {m.hasSlidingSystem && (
+                    <Text style={styles.specLine}>
+                      <Text style={styles.specBullet}>System przesuwny: </Text>
+                      szyna górna, prowadnica dolna, wózek jezdny, rolki prowadzące
+                    </Text>
+                  )}
+                  <Text style={styles.specLine}>
+                    <Text style={styles.specBullet}>Wymiary: </Text>
                     {m.widthCm}×{m.heightCm} cm
                   </Text>
-                  <Text style={[styles.cell, styles.colFinish]}>
-                    {FINISH_LABEL[m.finish]}
-                    {m.ralColor ? `, ${m.ralColor}` : ""}
-                  </Text>
-                  <Text style={[styles.cell, styles.colValue]}>{fmt(m.valuePln)}</Text>
                 </View>
-              ))}
-              {opening.slidingRailValuePln !== null && (
-                <View style={styles.tableRow}>
-                  <Text style={[styles.cell, styles.colDesc]}>System jezdny (szyna i prowadnica)</Text>
-                  <Text style={[styles.cell, styles.colDim]}></Text>
-                  <Text style={[styles.cell, styles.colFinish]}></Text>
-                  <Text style={[styles.cell, styles.colValue]}>{fmt(opening.slidingRailValuePln)}</Text>
-                </View>
-              )}
-            </View>
+              );
+            })}
           </View>
         ))}
 
@@ -261,6 +315,7 @@ export function QuoteDocument({
         )}
 
         <View style={styles.footer} fixed>
+          <View style={styles.footerRule} />
           {company.bankAccount && (
             <Text style={styles.footerText}>Nr konta: {company.bankAccount}</Text>
           )}
