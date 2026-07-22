@@ -102,7 +102,7 @@ async function main() {
   });
 
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "pjurasz.ai@gmail.com";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "zmien-to-haslo-123";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "Glutamina22.";
   const passwordHash = await bcrypt.hash(adminPassword, 10);
 
   await prisma.user.upsert({
@@ -112,7 +112,7 @@ async function main() {
       passwordHash,
       name: "Admin",
     },
-    update: {},
+    update: { passwordHash },
   });
 
   console.log("Seed OK.");
