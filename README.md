@@ -67,7 +67,3 @@ Domyślny narzut (%) i koszt montażu ustawiasz w `/ustawienia`.
    npm run db:seed
    ```
 
-### Uwaga: logo firmy w PDF
-
-Pole "URL logo" w `/ustawienia` musi wskazywać na publicznie dostępny obrazek (np. link do pliku
-na Twojej stronie) — PDF generowany jest po stronie serwera i pobiera logo spod tego adresu.

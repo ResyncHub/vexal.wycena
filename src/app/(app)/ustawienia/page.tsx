@@ -62,7 +62,6 @@ export default async function UstawieniaPage() {
           <Field label="Telefon" name="phone" defaultValue={settings?.phone} />
           <Field label="E-mail" name="email" type="email" defaultValue={settings?.email} />
           <Field label="Numer konta bankowego" name="bankAccount" defaultValue={settings?.bankAccount} />
-          <Field label="URL logo (link do obrazka)" name="logoUrl" defaultValue={settings?.logoUrl} />
           <Field label="Prefiks numeru wyceny" name="quoteNumberPrefix" defaultValue={settings?.quoteNumberPrefix} />
         </div>
 

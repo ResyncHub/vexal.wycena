@@ -71,7 +71,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         phone: company?.phone ?? null,
         email: company?.email ?? null,
         bankAccount: company?.bankAccount ?? null,
-        logoUrl: company?.logoUrl ?? null,
         footerTerms: company?.footerTerms ?? null,
       },
       client: quote.client

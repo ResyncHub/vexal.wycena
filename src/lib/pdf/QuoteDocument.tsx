@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Document, Page, View, Text, Image, StyleSheet, Font } from "@react-pdf/renderer";
+import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
 
 Font.register({
   family: "Liberation Sans",
@@ -7,6 +7,17 @@ Font.register({
     { src: path.join(process.cwd(), "src/lib/pdf/fonts/LiberationSans-Regular.ttf") },
     {
       src: path.join(process.cwd(), "src/lib/pdf/fonts/LiberationSans-Bold.ttf"),
+      fontWeight: "bold",
+    },
+  ],
+});
+
+Font.register({
+  family: "Playfair Display",
+  fonts: [
+    { src: path.join(process.cwd(), "src/lib/pdf/fonts/PlayfairDisplay-Regular.ttf") },
+    {
+      src: path.join(process.cwd(), "src/lib/pdf/fonts/PlayfairDisplay-Bold.ttf"),
       fontWeight: "bold",
     },
   ],
@@ -30,7 +41,13 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 12,
   },
-  logo: { width: 130, maxHeight: 56, objectFit: "contain" },
+  wordmark: {
+    fontFamily: "Playfair Display",
+    fontWeight: "bold",
+    fontSize: 28,
+    color: ACCENT,
+    letterSpacing: 1,
+  },
   companyBlock: { textAlign: "right" },
   companyName: { fontSize: 13, fontWeight: "bold", marginBottom: 3, color: ACCENT },
   companyLine: { fontSize: 8.5, color: MUTED },
@@ -120,7 +137,6 @@ export interface PdfCompany {
   phone: string | null;
   email: string | null;
   bankAccount: string | null;
-  logoUrl: string | null;
   footerTerms: string | null;
 }
 
@@ -200,12 +216,7 @@ export function QuoteDocument({
     <Document title={`Wycena ${quote.number}`}>
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
-          {company.logoUrl ? (
-            // eslint-disable-next-line jsx-a11y/alt-text
-            <Image src={company.logoUrl} style={styles.logo} />
-          ) : (
-            <View />
-          )}
+          <Text style={styles.wordmark}>VEXAL</Text>
           <View style={styles.companyBlock}>
             <Text style={styles.companyName}>{company.name}</Text>
             {company.address && <Text style={styles.companyLine}>{company.address}</Text>}
