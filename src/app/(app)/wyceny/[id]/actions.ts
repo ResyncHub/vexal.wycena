@@ -14,13 +14,16 @@ import type {
 
 export async function updateQuoteHeader(quoteId: string, formData: FormData) {
   const get = (key: string) => String(formData.get(key) ?? "").trim();
-  const clientId = get("clientId");
   const validUntilRaw = get("validUntil");
 
   await db.quote.update({
     where: { id: quoteId },
     data: {
-      clientId: clientId || null,
+      clientName: get("clientName") || null,
+      clientNip: get("clientNip") || null,
+      clientAddress: get("clientAddress") || null,
+      clientEmail: get("clientEmail") || null,
+      clientPhone: get("clientPhone") || null,
       status: get("status") as "DRAFT" | "SENT" | "ACCEPTED" | "REJECTED",
       markupPercent: Number(get("markupPercent").replace(",", ".")) || 0,
       discountPercent: Number(get("discountPercent").replace(",", ".")) || 0,

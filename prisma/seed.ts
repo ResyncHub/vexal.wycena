@@ -96,7 +96,7 @@ async function main() {
       quoteValidityDays: 14,
       defaultMarkupPercent: 0,
       defaultInstallationPln: 0,
-      quoteNumberPrefix: "WYC",
+      quoteNumberPrefix: "VEX",
     },
     update: {},
   });

@@ -35,7 +35,11 @@ export async function duplicateQuote(formData: FormData) {
     data: {
       number,
       validUntil,
-      clientId: source.clientId,
+      clientName: source.clientName,
+      clientNip: source.clientNip,
+      clientAddress: source.clientAddress,
+      clientEmail: source.clientEmail,
+      clientPhone: source.clientPhone,
       markupPercent: source.markupPercent,
       discountPercent: source.discountPercent,
       installationPln: source.installationPln,

@@ -19,7 +19,6 @@ const STATUS_STYLE: Record<string, string> = {
 
 export default async function HomePage() {
   const quotes = await db.quote.findMany({
-    include: { client: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -67,7 +66,7 @@ export default async function HomePage() {
                     {q.number}
                   </Link>
                 </td>
-                <td className="px-3 py-2 text-neutral-600">{q.client?.name ?? "—"}</td>
+                <td className="px-3 py-2 text-neutral-600">{q.clientName ?? "—"}</td>
                 <td className="px-3 py-2">
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[q.status]}`}

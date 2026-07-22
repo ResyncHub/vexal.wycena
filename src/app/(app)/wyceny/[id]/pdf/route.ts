@@ -13,7 +13,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const quote = await db.quote.findUnique({
     where: { id },
     include: {
-      client: true,
       openings: {
         orderBy: { position: "asc" },
         include: { modules: { orderBy: { position: "asc" } } },
@@ -62,6 +61,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     };
   });
 
+  const withInstallationPln = round2(itemsSubtotalPln + toNumber(quote.installationPln));
+  const discountAmountPln = round2(withInstallationPln * (toNumber(quote.discountPercent) / 100));
+
   const pdfBuffer = await renderToBuffer(
     QuoteDocument({
       company: {
@@ -73,13 +75,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         bankAccount: company?.bankAccount ?? null,
         footerTerms: company?.footerTerms ?? null,
       },
-      client: quote.client
+      client: quote.clientName
         ? {
-            name: quote.client.name,
-            address: quote.client.address,
-            nip: quote.client.nip,
-            email: quote.client.email,
-            phone: quote.client.phone,
+            name: quote.clientName,
+            address: quote.clientAddress,
+            nip: quote.clientNip,
+            email: quote.clientEmail,
+            phone: quote.clientPhone,
           }
         : null,
       quote: {
@@ -87,6 +89,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         createdAt: quote.createdAt,
         validUntil: quote.validUntil,
         discountPercent: toNumber(quote.discountPercent),
+        discountAmountPln,
         installationPln: toNumber(quote.installationPln),
         notes: quote.notes,
         totalPricePln: toNumber(quote.totalPricePln),
@@ -99,7 +102,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   return new Response(new Uint8Array(pdfBuffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="wycena-${quote.number.replace(/\//g, "-")}.pdf"`,
+      "Content-Disposition": `inline; filename="oferta-${quote.number.replace(/\//g, "-")}.pdf"`,
     },
   });
 }

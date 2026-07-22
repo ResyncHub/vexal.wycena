@@ -71,7 +71,6 @@ export default async function QuoteDetailPage({
   const quote = await db.quote.findUnique({
     where: { id },
     include: {
-      client: true,
       openings: {
         orderBy: { position: "asc" },
         include: { modules: { orderBy: { position: "asc" } } },
@@ -80,8 +79,6 @@ export default async function QuoteDetailPage({
   });
 
   if (!quote) notFound();
-
-  const clients = await db.client.findMany({ orderBy: { name: "asc" } });
 
   const boundUpdateHeader = updateQuoteHeader.bind(null, quote.id);
   const boundAddOpening = addOpening.bind(null, quote.id);
@@ -107,22 +104,56 @@ export default async function QuoteDetailPage({
 
       <section className="rounded-lg border border-neutral-200 bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold text-neutral-900">Dane wyceny</h2>
-        <form action={boundUpdateHeader} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <form action={boundUpdateHeader} className="space-y-5">
           <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">Klient</label>
-            <select
-              name="clientId"
-              defaultValue={quote.clientId ?? ""}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-            >
-              <option value="">— brak —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <h3 className="mb-2 text-sm font-medium text-neutral-700">Dane klienta</h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">Nazwa / imię i nazwisko</label>
+                <input
+                  name="clientName"
+                  defaultValue={quote.clientName ?? ""}
+                  className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">Telefon</label>
+                <input
+                  name="clientPhone"
+                  defaultValue={quote.clientPhone ?? ""}
+                  placeholder="np. 600 700 800"
+                  className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">E-mail</label>
+                <input
+                  name="clientEmail"
+                  type="email"
+                  defaultValue={quote.clientEmail ?? ""}
+                  className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">NIP (opcjonalnie)</label>
+                <input
+                  name="clientNip"
+                  defaultValue={quote.clientNip ?? ""}
+                  className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-4">
+                <label className="mb-1 block text-xs font-medium text-neutral-600">Adres</label>
+                <input
+                  name="clientAddress"
+                  defaultValue={quote.clientAddress ?? ""}
+                  className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
           </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-neutral-700">Status</label>
             <select
@@ -186,6 +217,7 @@ export default async function QuoteDetailPage({
             >
               Zapisz
             </button>
+          </div>
           </div>
         </form>
       </section>
@@ -553,7 +585,7 @@ export default async function QuoteDetailPage({
                 </div>
               )}
               <div className="flex justify-between border-t border-neutral-200 pt-2 text-base font-semibold">
-                <dt className="text-neutral-900">Cena dla klienta</dt>
+                <dt className="text-neutral-900">Cena dla klienta (brutto)</dt>
                 <dd className="text-neutral-900">{fmt(toNumber(quote.totalPricePln))} zł</dd>
               </div>
             </dl>

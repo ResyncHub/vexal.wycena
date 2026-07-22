@@ -146,8 +146,6 @@ model Client {
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  quotes Quote[]
 }
 
 // ---------------------------------------------------------------------------
@@ -165,8 +163,13 @@ model Quote {
   id              String      @id @default(cuid())
   number          String      @unique
   status          QuoteStatus @default(DRAFT)
-  clientId        String?
-  client          Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  // Dane klienta wpisywane bezpośrednio na wycenie (bez wybierania z listy
+  // istniejących klientów - szybszy jednokrokowy przepływ).
+  clientName      String?
+  clientNip       String?
+  clientAddress   String?
+  clientEmail     String?
+  clientPhone     String?
   validUntil      DateTime?
   // Narzut/marża indywidualna dla tej wyceny (startuje od domyślnej z
   // ustawień firmy, ale edytowalna osobno dla każdego klienta/wyceny).

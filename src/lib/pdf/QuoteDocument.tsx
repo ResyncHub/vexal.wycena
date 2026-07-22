@@ -172,6 +172,7 @@ export interface PdfQuote {
   createdAt: Date;
   validUntil: Date | null;
   discountPercent: number;
+  discountAmountPln: number;
   installationPln: number;
   notes: string | null;
   totalPricePln: number;
@@ -196,6 +197,14 @@ function fmtDate(d: Date | null): string {
   return d.toLocaleDateString("pl-PL");
 }
 
+/** Dopisuje "tel." i domyślny kierunkowy +48, żeby numer nigdy nie
+ * wyglądał jak goła, nieoznaczona liczba. */
+function fmtPhone(raw: string): string {
+  const trimmed = raw.trim();
+  const withCountryCode = trimmed.startsWith("+") ? trimmed : `+48 ${trimmed}`;
+  return `tel. ${withCountryCode}`;
+}
+
 export function QuoteDocument({
   company,
   client,
@@ -213,7 +222,7 @@ export function QuoteDocument({
   const moduleNumbers = openings.map((opening) => opening.modules.map(() => ++counter));
 
   return (
-    <Document title={`Wycena ${quote.number}`}>
+    <Document title={`Oferta ${quote.number}`}>
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
           <Text style={styles.wordmark}>VEXAL</Text>
@@ -221,13 +230,13 @@ export function QuoteDocument({
             <Text style={styles.companyName}>{company.name}</Text>
             {company.address && <Text style={styles.companyLine}>{company.address}</Text>}
             {company.nip && <Text style={styles.companyLine}>NIP: {company.nip}</Text>}
-            {company.phone && <Text style={styles.companyLine}>{company.phone}</Text>}
+            {company.phone && <Text style={styles.companyLine}>{fmtPhone(company.phone)}</Text>}
             {company.email && <Text style={styles.companyLine}>{company.email}</Text>}
           </View>
         </View>
         <View style={styles.headerRule} />
 
-        <Text style={styles.title}>WYCENA NR {quote.number}</Text>
+        <Text style={styles.title}>OFERTA NR {quote.number}</Text>
         <Text style={styles.subtitle}>
           Data wystawienia: {fmtDate(quote.createdAt)}
           {quote.validUntil ? `   ·   Ważna do: ${fmtDate(quote.validUntil)}` : ""}
@@ -248,7 +257,7 @@ export function QuoteDocument({
               {client.address && <Text style={styles.infoValue}>{client.address}</Text>}
               {client.nip && <Text style={styles.infoValue}>NIP: {client.nip}</Text>}
               {client.email && <Text style={styles.infoValue}>{client.email}</Text>}
-              {client.phone && <Text style={styles.infoValue}>{client.phone}</Text>}
+              {client.phone && <Text style={styles.infoValue}>{fmtPhone(client.phone)}</Text>}
             </View>
           )}
         </View>
@@ -308,12 +317,12 @@ export function QuoteDocument({
           )}
           {quote.discountPercent > 0 && (
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Rabat</Text>
-              <Text style={styles.summaryValue}>-{quote.discountPercent}%</Text>
+              <Text style={styles.summaryLabel}>Rabat ({quote.discountPercent}%)</Text>
+              <Text style={styles.summaryValue}>-{fmt(quote.discountAmountPln)}</Text>
             </View>
           )}
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Do zapłaty</Text>
+            <Text style={styles.totalLabel}>Do zapłaty (brutto)</Text>
             <Text style={styles.totalValue}>{fmt(quote.totalPricePln)}</Text>
           </View>
         </View>
