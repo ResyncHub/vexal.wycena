@@ -177,3 +177,50 @@ export async function toggleModuleCostLine(
   await recalculateQuoteTotals(quoteId);
   revalidatePath(`/wyceny/${quoteId}`);
 }
+
+/** Ręcznie nadpisuje ilość w jednej pozycji rozbicia kosztu modułu (np.
+ * liczbę lameli) i przelicza jej wartość oraz koszt całego modułu.
+ * Pozwala sprzedać inną liczbę lameli niż wynika z automatycznego
+ * dopasowania do wymiaru otworu. */
+export async function updateModuleCostLineQuantity(
+  quoteId: string,
+  moduleId: string,
+  lineIndex: number,
+  formData: FormData,
+) {
+  const quantity = Number(String(formData.get("quantity") ?? "").replace(",", "."));
+  if (!Number.isFinite(quantity) || quantity < 0) {
+    throw new PricingError("Podaj poprawną ilość (liczbę większą lub równą zero).");
+  }
+
+  const quoteModule = await db.quoteModule.findUniqueOrThrow({ where: { id: moduleId } });
+
+  const lines = Array.isArray(quoteModule.costBreakdownJson)
+    ? (quoteModule.costBreakdownJson as unknown as ModuleCostLine[])
+    : [];
+  if (lineIndex < 0 || lineIndex >= lines.length) return;
+
+  const updatedLines = lines.map((line, i) =>
+    i === lineIndex
+      ? { ...line, quantity, totalNetPln: round2(quantity * line.unitPriceNetPln) }
+      : line,
+  );
+  const costNetPln = round2(
+    updatedLines.filter((l) => !l.excluded).reduce((sum, l) => sum + l.totalNetPln, 0),
+  );
+
+  const editedLine = updatedLines[lineIndex];
+  const isLamelaLine = editedLine.label.startsWith("Lamela ");
+
+  await db.quoteModule.update({
+    where: { id: moduleId },
+    data: {
+      costBreakdownJson: JSON.parse(JSON.stringify(updatedLines)),
+      costNetPln,
+      ...(isLamelaLine ? { lamelCount: Math.round(quantity) } : {}),
+    },
+  });
+
+  await recalculateQuoteTotals(quoteId);
+  revalidatePath(`/wyceny/${quoteId}`);
+}

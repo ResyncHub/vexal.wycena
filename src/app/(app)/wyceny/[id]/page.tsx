@@ -10,6 +10,7 @@ import {
   deleteModule,
   deleteOpening,
   toggleModuleCostLine,
+  updateModuleCostLineQuantity,
   updateModuleDisplayDimensions,
   updateQuoteHeader,
 } from "./actions";
@@ -304,6 +305,11 @@ export default async function QuoteDetailPage({
                         m.id,
                       );
                       const boundToggleCostLine = toggleModuleCostLine.bind(null, quote.id, m.id);
+                      const boundUpdateCostLineQuantity = updateModuleCostLineQuantity.bind(
+                        null,
+                        quote.id,
+                        m.id,
+                      );
                       const hasDisplayOverride = m.displayWidthCm !== null || m.displayHeightCm !== null;
                       const shownWidthCm = toNumber(m.displayWidthCm ?? m.actualWidthCm);
                       const shownHeightCm = toNumber(m.displayHeightCm ?? m.actualHeightCm);
@@ -387,8 +393,9 @@ export default async function QuoteDetailPage({
                               <td></td>
                               <td colSpan={7} className="py-2">
                                 <p className="mb-1 max-w-lg text-xs text-neutral-400">
-                                  Odejmij pozycję, jeśli sprzedajesz ten moduł bez niej (np. same
-                                  lamele z okuciami, bez ramy).
+                                  Zmień ilość (np. liczbę lameli) lub odejmij pozycję, jeśli
+                                  sprzedajesz ten moduł bez niej (np. same lamele z okuciami, bez
+                                  ramy).
                                 </p>
                                 <table className="w-full max-w-lg text-xs">
                                   <tbody>
@@ -399,10 +406,28 @@ export default async function QuoteDetailPage({
                                         >
                                           {line.label}
                                         </td>
-                                        <td
-                                          className={`py-0.5 pr-3 text-neutral-500 ${line.excluded ? "line-through" : ""}`}
-                                        >
-                                          {line.quantity}× {fmt(line.unitPriceNetPln)} zł
+                                        <td className="py-0.5 pr-3 text-neutral-500">
+                                          <form
+                                            action={boundUpdateCostLineQuantity.bind(null, i)}
+                                            className="flex items-center gap-1"
+                                          >
+                                            <input
+                                              name="quantity"
+                                              defaultValue={line.quantity}
+                                              disabled={line.excluded}
+                                              className="w-12 rounded border border-neutral-300 px-1 py-0.5 text-xs disabled:bg-neutral-100"
+                                            />
+                                            <button
+                                              type="submit"
+                                              disabled={line.excluded}
+                                              className="text-blue-600 underline disabled:text-neutral-300 disabled:no-underline"
+                                            >
+                                              Zapisz
+                                            </button>
+                                            <span className={line.excluded ? "line-through" : undefined}>
+                                              × {fmt(line.unitPriceNetPln)} zł
+                                            </span>
+                                          </form>
                                         </td>
                                         <td
                                           className={`py-0.5 text-right text-neutral-600 ${line.excluded ? "line-through" : ""}`}
