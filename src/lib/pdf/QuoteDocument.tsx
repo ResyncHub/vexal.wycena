@@ -160,6 +160,9 @@ export interface PdfModuleLine {
    * udział we wspólnej szynie/prowadnicy otworu, żeby była jedna cena. */
   valuePln: number;
   hasSlidingSystem: boolean;
+  /** false, gdy pozycje ramy zostały odjęte od ceny modułu (sprzedaż
+   * samych lameli z okuciami, bez ramy). */
+  hasFrame: boolean;
 }
 
 export interface PdfOpening {
@@ -285,8 +288,11 @@ export function QuoteDocument({
                     {m.ralColor ? `, ${m.ralColor}` : ""}, ustawienie {ORIENTATION_LABEL[m.orientation]}
                   </Text>
                   <Text style={styles.specLine}>
-                    <Text style={styles.specBullet}>Rama i okucia: </Text>
-                    rama aluminiowa, okucia {m.okucieMaterial === "ALUMINIOWE" ? "aluminiowe" : "plastikowe"}
+                    <Text style={styles.specBullet}>
+                      {m.hasFrame ? "Rama i okucia: " : "Okucia (bez ramy): "}
+                    </Text>
+                    {m.hasFrame ? "rama aluminiowa, " : ""}
+                    okucia {m.okucieMaterial === "ALUMINIOWE" ? "aluminiowe" : "plastikowe"}
                   </Text>
                   {m.hasSlidingSystem && (
                     <Text style={styles.specLine}>

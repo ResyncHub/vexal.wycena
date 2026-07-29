@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { computeModuleCost, PricingError } from "@/lib/pricing/engine";
+import { computeModuleCost, PricingError, round2 } from "@/lib/pricing/engine";
 import { loadPriceCatalog } from "@/lib/pricing/catalog";
 import { recalculateOpeningRail, recalculateQuoteTotals } from "@/lib/pricing/quote-totals";
 import type {
   LamelaFinish,
   LamelaOrientation,
+  ModuleCostLine,
   ModuleType,
   OkucieMaterial,
 } from "@/lib/pricing/types";
@@ -140,5 +141,39 @@ export async function updateModuleDisplayDimensions(
     },
   });
 
+  revalidatePath(`/wyceny/${quoteId}`);
+}
+
+/** Odejmuje (lub przywraca) pojedynczą pozycję z rozbicia kosztu modułu -
+ * pozwala np. sprzedać same lamele z okuciami bez ramy, bez zmiany
+ * wymiarów czy przeliczania modułu od nowa. */
+export async function toggleModuleCostLine(
+  quoteId: string,
+  moduleId: string,
+  lineIndex: number,
+) {
+  const quoteModule = await db.quoteModule.findUniqueOrThrow({ where: { id: moduleId } });
+
+  const lines = Array.isArray(quoteModule.costBreakdownJson)
+    ? (quoteModule.costBreakdownJson as unknown as ModuleCostLine[])
+    : [];
+  if (lineIndex < 0 || lineIndex >= lines.length) return;
+
+  const updatedLines = lines.map((line, i) =>
+    i === lineIndex ? { ...line, excluded: !line.excluded } : line,
+  );
+  const costNetPln = round2(
+    updatedLines.filter((l) => !l.excluded).reduce((sum, l) => sum + l.totalNetPln, 0),
+  );
+
+  await db.quoteModule.update({
+    where: { id: moduleId },
+    data: {
+      costBreakdownJson: JSON.parse(JSON.stringify(updatedLines)),
+      costNetPln,
+    },
+  });
+
+  await recalculateQuoteTotals(quoteId);
   revalidatePath(`/wyceny/${quoteId}`);
 }

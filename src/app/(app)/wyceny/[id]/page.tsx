@@ -9,6 +9,7 @@ import {
   addOpening,
   deleteModule,
   deleteOpening,
+  toggleModuleCostLine,
   updateModuleDisplayDimensions,
   updateQuoteHeader,
 } from "./actions";
@@ -49,6 +50,7 @@ interface CostBreakdownLine {
   quantity: number;
   unitPriceNetPln: number;
   totalNetPln: number;
+  excluded?: boolean;
 }
 
 function parseCostBreakdown(json: unknown): CostBreakdownLine[] {
@@ -301,6 +303,7 @@ export default async function QuoteDetailPage({
                         quote.id,
                         m.id,
                       );
+                      const boundToggleCostLine = toggleModuleCostLine.bind(null, quote.id, m.id);
                       const hasDisplayOverride = m.displayWidthCm !== null || m.displayHeightCm !== null;
                       const shownWidthCm = toNumber(m.displayWidthCm ?? m.actualWidthCm);
                       const shownHeightCm = toNumber(m.displayHeightCm ?? m.actualHeightCm);
@@ -383,16 +386,35 @@ export default async function QuoteDetailPage({
                             <tr className="bg-neutral-50">
                               <td></td>
                               <td colSpan={7} className="py-2">
+                                <p className="mb-1 max-w-lg text-xs text-neutral-400">
+                                  Odejmij pozycję, jeśli sprzedajesz ten moduł bez niej (np. same
+                                  lamele z okuciami, bez ramy).
+                                </p>
                                 <table className="w-full max-w-lg text-xs">
                                   <tbody>
                                     {breakdown.map((line, i) => (
-                                      <tr key={i}>
-                                        <td className="py-0.5 pr-3 text-neutral-500">{line.label}</td>
-                                        <td className="py-0.5 pr-3 text-neutral-500">
+                                      <tr key={i} className={line.excluded ? "opacity-50" : undefined}>
+                                        <td
+                                          className={`py-0.5 pr-3 text-neutral-500 ${line.excluded ? "line-through" : ""}`}
+                                        >
+                                          {line.label}
+                                        </td>
+                                        <td
+                                          className={`py-0.5 pr-3 text-neutral-500 ${line.excluded ? "line-through" : ""}`}
+                                        >
                                           {line.quantity}× {fmt(line.unitPriceNetPln)} zł
                                         </td>
-                                        <td className="py-0.5 text-right text-neutral-600">
+                                        <td
+                                          className={`py-0.5 text-right text-neutral-600 ${line.excluded ? "line-through" : ""}`}
+                                        >
                                           {fmt(line.totalNetPln)} zł netto
+                                        </td>
+                                        <td className="py-0.5 pl-3 text-right">
+                                          <form action={boundToggleCostLine.bind(null, i)}>
+                                            <button type="submit" className="text-blue-600 hover:underline">
+                                              {line.excluded ? "Przywróć" : "Odejmij"}
+                                            </button>
+                                          </form>
                                         </td>
                                       </tr>
                                     ))}
@@ -400,7 +422,7 @@ export default async function QuoteDetailPage({
                                       <td className="py-0.5 pr-3 text-neutral-700" colSpan={2}>
                                         Razem netto (koszt dostawcy)
                                       </td>
-                                      <td className="py-0.5 text-right text-neutral-800">
+                                      <td className="py-0.5 text-right text-neutral-800" colSpan={2}>
                                         {fmt(toNumber(m.costNetPln))} zł
                                       </td>
                                     </tr>

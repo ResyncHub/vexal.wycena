@@ -35,6 +35,10 @@ export interface ModuleCostLine {
   quantity: number;
   unitPriceNetPln: number;
   totalNetPln: number;
+  /** Pozycja ręcznie odjęta od ceny modułu (np. sprzedaż samych lameli z
+   * okuciami bez ramy) - nie liczy się do costNetPln, ale zostaje widoczna
+   * w rozbiciu jako przekreślona. */
+  excluded?: boolean;
 }
 
 export interface ModuleCostResult {

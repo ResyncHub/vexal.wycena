@@ -4,8 +4,20 @@ import { db } from "@/lib/db";
 import { toNumber } from "@/lib/decimal";
 import { netToGrossCost, round2 } from "@/lib/pricing/engine";
 import { QuoteDocument, type PdfOpening } from "@/lib/pdf/QuoteDocument";
+import type { ModuleCostLine } from "@/lib/pricing/types";
 
 export const runtime = "nodejs";
+
+/** Rama jest ujęta w cenie modułu, chyba że jej pozycje zostały ręcznie
+ * odjęte w rozbiciu kosztu (sprzedaż samych lameli z okuciami, bez ramy). */
+function hasActiveFrame(costBreakdownJson: unknown): boolean {
+  const lines = Array.isArray(costBreakdownJson)
+    ? (costBreakdownJson as unknown as ModuleCostLine[])
+    : [];
+  const frameLines = lines.filter((l) => l.label.startsWith("Profil ramy"));
+  if (frameLines.length === 0) return true;
+  return frameLines.some((l) => !l.excluded);
+}
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -52,6 +64,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         okucieMaterial: m.okucieMaterial,
         valuePln,
         hasSlidingSystem: isSliding,
+        hasFrame: hasActiveFrame(m.costBreakdownJson),
       };
     });
 
