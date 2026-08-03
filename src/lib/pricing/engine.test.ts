@@ -36,10 +36,12 @@ function buildTestCatalog(): PriceCatalog {
     },
     slidingCarriageSetPriceNetPln: SLIDING_CARRIAGE_SET_NET_PLN,
     slidingGuideRollerPriceNetPln: SLIDING_GUIDE_ROLLER_NET_PLN,
-    coverageTable: COVERAGE_TABLE.flatMap(([coverageCm, lamelCount, uchwytSets]) => [
-      { orientation: "POZIOMO" as const, coverageCm, lamelCount, uchwytSets },
-      { orientation: "PIONOWO" as const, coverageCm, lamelCount, uchwytSets },
-    ]),
+    coverageTable: COVERAGE_TABLE.flatMap(
+      ([coverageCm, lamelCount, uchwytSets]) => [
+        { orientation: "POZIOMO" as const, coverageCm, lamelCount, uchwytSets },
+        { orientation: "PIONOWO" as const, coverageCm, lamelCount, uchwytSets },
+      ],
+    ),
   };
 }
 
@@ -169,7 +171,8 @@ describe("computeModuleCost - moduł stały 140x220", () => {
       catalog,
     );
 
-    const expectedExtra = SLIDING_CARRIAGE_SET_NET_PLN + 2 * SLIDING_GUIDE_ROLLER_NET_PLN;
+    const expectedExtra =
+      SLIDING_CARRIAGE_SET_NET_PLN + 2 * SLIDING_GUIDE_ROLLER_NET_PLN;
     expect(jezdny.costNetPln).toBeCloseTo(staly.costNetPln + expectedExtra, 2);
   });
 
@@ -198,6 +201,17 @@ describe("computeOpeningSlidingRailCost", () => {
     expect(result.topProfileLengthCm).toBe(320);
     expect(result.bottomProfileLengthCm).toBe(320);
     expect(result.costNetPln).toBeCloseTo(206.44 + 93.66, 2);
+  });
+
+  it("dobiera kilka odcinków do samodzielnego złączenia zamiast blokować wycenę, gdy otwór jest szerszy niż najdłuższy odcinek w cenniku", () => {
+    // Prowadnica dolna w danych testowych kończy się na 400 cm - otwór 470
+    // cm nie mieści się w jednym odcinku, więc klient łączy dwa po 400 cm.
+    const result = computeOpeningSlidingRailCost(470, catalog);
+    expect(result.topProfileLengthCm).toBe(500);
+    expect(result.bottomProfileLengthCm).toBe(400);
+    const bottomLine = result.lines.find((l) => l.label.includes("dolny"));
+    expect(bottomLine?.quantity).toBe(2);
+    expect(result.costNetPln).toBeCloseTo(322.56 + 2 * 117.07, 2);
   });
 });
 

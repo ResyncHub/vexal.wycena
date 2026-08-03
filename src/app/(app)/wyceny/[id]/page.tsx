@@ -10,8 +10,10 @@ import {
   deleteModule,
   deleteModuleLine,
   deleteOpening,
+  deleteOpeningRailLine,
   updateModuleDisplayDimensions,
   updateModuleLineQuantity,
+  updateOpeningRailLineQuantity,
   updateQuoteHeader,
 } from "./actions";
 import { AddModuleForm } from "./AddModuleForm";
@@ -265,24 +267,67 @@ export default async function QuoteDetailPage({
                 <div className="mb-4 rounded-md border border-blue-100 bg-blue-50 p-3">
                   <p className="mb-1.5 text-xs font-medium uppercase text-blue-700">
                     Wspólne dla otworu (jeden komplet na cały otwór, niezależnie
-                    od liczby modułów jezdnych)
+                    od liczby modułów jezdnych) - ilość odcinków możesz
+                    skorygować, jeśli łączysz je samodzielnie
                   </p>
-                  <table className="w-full max-w-lg text-xs">
+                  <table className="w-full max-w-xl text-xs">
                     <tbody>
                       {parseCostBreakdown(opening.railBreakdownJson).map(
-                        (line, i) => (
-                          <tr key={i}>
-                            <td className="py-0.5 pr-3 text-neutral-600">
-                              {line.label}
-                            </td>
-                            <td className="py-0.5 pr-3 text-neutral-600">
-                              {line.quantity}× {fmt(line.unitPriceNetPln)} zł
-                            </td>
-                            <td className="py-0.5 text-right text-neutral-700">
-                              {fmt(line.totalNetPln)} zł netto
-                            </td>
-                          </tr>
-                        ),
+                        (line, i) => {
+                          const boundUpdateRailLineQty =
+                            updateOpeningRailLineQuantity.bind(
+                              null,
+                              quote.id,
+                              opening.id,
+                              i,
+                            );
+                          const boundDeleteRailLine =
+                            deleteOpeningRailLine.bind(
+                              null,
+                              quote.id,
+                              opening.id,
+                              i,
+                            );
+                          return (
+                            <tr key={i}>
+                              <td className="py-0.5 pr-3 text-neutral-600">
+                                {line.label}
+                              </td>
+                              <td className="py-0.5 pr-3 text-neutral-600">
+                                <form
+                                  action={boundUpdateRailLineQty}
+                                  className="flex items-center gap-1"
+                                >
+                                  <input
+                                    name="quantity"
+                                    defaultValue={line.quantity}
+                                    className="w-12 rounded border border-neutral-300 px-1 py-0.5 text-xs"
+                                  />
+                                  <span>× {fmt(line.unitPriceNetPln)} zł</span>
+                                  <button
+                                    type="submit"
+                                    className="text-blue-700 underline"
+                                  >
+                                    Zapisz
+                                  </button>
+                                </form>
+                              </td>
+                              <td className="py-0.5 text-right text-neutral-700">
+                                {fmt(line.totalNetPln)} zł netto
+                              </td>
+                              <td className="py-0.5 pl-2 text-right">
+                                <form action={boundDeleteRailLine}>
+                                  <button
+                                    type="submit"
+                                    className="text-red-600 hover:underline"
+                                  >
+                                    Usuń
+                                  </button>
+                                </form>
+                              </td>
+                            </tr>
+                          );
+                        },
                       )}
                       <tr className="border-t border-blue-200 font-medium">
                         <td
@@ -291,7 +336,10 @@ export default async function QuoteDetailPage({
                         >
                           Razem netto (szyna + prowadnica)
                         </td>
-                        <td className="py-0.5 text-right text-neutral-900">
+                        <td
+                          className="py-0.5 text-right text-neutral-900"
+                          colSpan={2}
+                        >
                           {fmt(toNumber(opening.slidingRailCostNetPln))} zł
                         </td>
                       </tr>

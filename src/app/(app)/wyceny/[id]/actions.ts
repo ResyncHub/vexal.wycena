@@ -3,9 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/decimal";
-import { computeModuleCost, computeOpeningSlidingRailCost, PricingError, round2 } from "@/lib/pricing/engine";
+import {
+  computeModuleCost,
+  computeOpeningSlidingRailCost,
+  PricingError,
+  round2,
+} from "@/lib/pricing/engine";
 import { loadPriceCatalog } from "@/lib/pricing/catalog";
-import { recalculateOpeningRail, recalculateQuoteTotals } from "@/lib/pricing/quote-totals";
+import {
+  recalculateOpeningRail,
+  recalculateQuoteTotals,
+} from "@/lib/pricing/quote-totals";
 import type {
   LamelaFinish,
   LamelaOrientation,
@@ -57,8 +65,12 @@ export async function addOpening(
   formData: FormData,
 ): Promise<ActionState> {
   const label = String(formData.get("label") ?? "").trim() || "Otwór";
-  const widthCm = Number(String(formData.get("widthCm") ?? "").replace(",", "."));
-  const heightCm = Number(String(formData.get("heightCm") ?? "").replace(",", "."));
+  const widthCm = Number(
+    String(formData.get("widthCm") ?? "").replace(",", "."),
+  );
+  const heightCm = Number(
+    String(formData.get("heightCm") ?? "").replace(",", "."),
+  );
 
   try {
     if (!Number.isFinite(widthCm) || widthCm <= 0) {
@@ -115,7 +127,9 @@ export async function addModule(
       // Sprawdź z wyprzedzeniem, czy wspólna szyna/prowadnica dla całego
       // otworu w ogóle mieści się w cenniku, zanim cokolwiek zapiszemy -
       // unika częściowego stanu (moduł zapisany, szyna nie do policzenia).
-      const opening = await db.quoteOpening.findUniqueOrThrow({ where: { id: openingId } });
+      const opening = await db.quoteOpening.findUniqueOrThrow({
+        where: { id: openingId },
+      });
       computeOpeningSlidingRailCost(toNumber(opening.widthCm), catalog);
     }
 
@@ -153,7 +167,11 @@ export async function addModule(
   }
 }
 
-export async function deleteModule(quoteId: string, openingId: string, moduleId: string) {
+export async function deleteModule(
+  quoteId: string,
+  openingId: string,
+  moduleId: string,
+) {
   await db.quoteModule.delete({ where: { id: moduleId } });
   await recalculateOpeningRail(openingId);
   revalidatePath(`/wyceny/${quoteId}`);
@@ -195,10 +213,16 @@ export async function updateModuleLineQuantity(
   lineIndex: number,
   formData: FormData,
 ) {
-  const quantity = Number(String(formData.get("quantity") ?? "").trim().replace(",", "."));
+  const quantity = Number(
+    String(formData.get("quantity") ?? "")
+      .trim()
+      .replace(",", "."),
+  );
   if (!Number.isFinite(quantity) || quantity < 0) return;
 
-  const quoteModule = await db.quoteModule.findUniqueOrThrow({ where: { id: moduleId } });
+  const quoteModule = await db.quoteModule.findUniqueOrThrow({
+    where: { id: moduleId },
+  });
   const lines = parseCostLines(quoteModule.costBreakdownJson);
   const line = lines[lineIndex];
   if (!line) return;
@@ -218,14 +242,91 @@ export async function updateModuleLineQuantity(
 
 /** Usunięcie pojedynczej pozycji z rozpiski kosztu modułu (np. profil ramy,
  * którego w danym montażu faktycznie się nie użyje). */
-export async function deleteModuleLine(quoteId: string, moduleId: string, lineIndex: number) {
-  const quoteModule = await db.quoteModule.findUniqueOrThrow({ where: { id: moduleId } });
-  const lines = parseCostLines(quoteModule.costBreakdownJson).filter((_, i) => i !== lineIndex);
+export async function deleteModuleLine(
+  quoteId: string,
+  moduleId: string,
+  lineIndex: number,
+) {
+  const quoteModule = await db.quoteModule.findUniqueOrThrow({
+    where: { id: moduleId },
+  });
+  const lines = parseCostLines(quoteModule.costBreakdownJson).filter(
+    (_, i) => i !== lineIndex,
+  );
   const costNetPln = round2(lines.reduce((sum, l) => sum + l.totalNetPln, 0));
 
   await db.quoteModule.update({
     where: { id: moduleId },
     data: { costBreakdownJson: JSON.parse(JSON.stringify(lines)), costNetPln },
+  });
+
+  await recalculateQuoteTotals(quoteId);
+  revalidatePath(`/wyceny/${quoteId}`);
+}
+
+/** Ręczna korekta ilości odcinków wspólnej szyny/prowadnicy otworu - np.
+ * klient łączy więcej krótszych odcinków samodzielnie zamiast jednego
+ * długiego z cennika. */
+export async function updateOpeningRailLineQuantity(
+  quoteId: string,
+  openingId: string,
+  lineIndex: number,
+  formData: FormData,
+) {
+  const quantity = Number(
+    String(formData.get("quantity") ?? "")
+      .trim()
+      .replace(",", "."),
+  );
+  if (!Number.isFinite(quantity) || quantity < 0) return;
+
+  const opening = await db.quoteOpening.findUniqueOrThrow({
+    where: { id: openingId },
+  });
+  const lines = parseCostLines(opening.railBreakdownJson);
+  const line = lines[lineIndex];
+  if (!line) return;
+
+  line.quantity = quantity;
+  line.totalNetPln = round2(quantity * line.unitPriceNetPln);
+  const slidingRailCostNetPln = round2(
+    lines.reduce((sum, l) => sum + l.totalNetPln, 0),
+  );
+
+  await db.quoteOpening.update({
+    where: { id: openingId },
+    data: {
+      railBreakdownJson: JSON.parse(JSON.stringify(lines)),
+      slidingRailCostNetPln,
+    },
+  });
+
+  await recalculateQuoteTotals(quoteId);
+  revalidatePath(`/wyceny/${quoteId}`);
+}
+
+/** Usunięcie pojedynczej pozycji z rozpiski wspólnej szyny/prowadnicy otworu. */
+export async function deleteOpeningRailLine(
+  quoteId: string,
+  openingId: string,
+  lineIndex: number,
+) {
+  const opening = await db.quoteOpening.findUniqueOrThrow({
+    where: { id: openingId },
+  });
+  const lines = parseCostLines(opening.railBreakdownJson).filter(
+    (_, i) => i !== lineIndex,
+  );
+  const slidingRailCostNetPln = round2(
+    lines.reduce((sum, l) => sum + l.totalNetPln, 0),
+  );
+
+  await db.quoteOpening.update({
+    where: { id: openingId },
+    data: {
+      railBreakdownJson: JSON.parse(JSON.stringify(lines)),
+      slidingRailCostNetPln,
+    },
   });
 
   await recalculateQuoteTotals(quoteId);

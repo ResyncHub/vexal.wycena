@@ -57,7 +57,10 @@ export function pickStrictlyGreaterLength(
   return length;
 }
 
-function priceForLength(priceByLength: Map<number, number>, lengthCm: number): number {
+function priceForLength(
+  priceByLength: Map<number, number>,
+  lengthCm: number,
+): number {
   const price = priceByLength.get(lengthCm);
   if (price === undefined) {
     throw new PricingError(`Brak ceny w cenniku dla długości ${lengthCm} cm.`);
@@ -69,10 +72,13 @@ export function computeModuleCost(
   input: ModuleInput,
   catalog: PriceCatalog,
 ): ModuleCostResult {
-  const { type, widthCm, heightCm, orientation, finish, okucieMaterial } = input;
+  const { type, widthCm, heightCm, orientation, finish, okucieMaterial } =
+    input;
 
   if (widthCm <= 0 || heightCm <= 0) {
-    throw new PricingError("Szerokość i wysokość modułu muszą być większe od zera.");
+    throw new PricingError(
+      "Szerokość i wysokość modułu muszą być większe od zera.",
+    );
   }
 
   // Wymiar "od liczby lameli" (stos okuć) i wymiar "wzdłuż lameli" (długość
@@ -86,13 +92,20 @@ export function computeModuleCost(
       `Wymiar ${stackDimCm} cm jest za mały, aby zmieścić ramę i luz montażowy.`,
     );
   }
-  const coverageRow = findCoverageRow(orientation, maxCoverageCm, catalog.coverageTable);
+  const coverageRow = findCoverageRow(
+    orientation,
+    maxCoverageCm,
+    catalog.coverageTable,
+  );
   // Rzeczywisty, fizycznie budowany wymiar w kierunku "od liczby lameli" -
   // z racji skokowego wzrostu co lamelę będzie <= żądanemu wymiarowi. Rama
   // musi być dopasowana do tego, co faktycznie powstanie, nie do życzenia.
-  const actualStackDimCm = round2(coverageRow.coverageCm + FRAME_LUZ_CM + 2 * FRAME_PROFILE_WIDTH_CM);
+  const actualStackDimCm = round2(
+    coverageRow.coverageCm + FRAME_LUZ_CM + 2 * FRAME_PROFILE_WIDTH_CM,
+  );
   const actualWidthCm = orientation === "POZIOMO" ? widthCm : actualStackDimCm;
-  const actualHeightCm = orientation === "POZIOMO" ? actualStackDimCm : heightCm;
+  const actualHeightCm =
+    orientation === "POZIOMO" ? actualStackDimCm : heightCm;
 
   const neededLamelLengthCm = lamelDimCm - 2 * FRAME_PROFILE_WIDTH_CM;
   if (neededLamelLengthCm <= 0) {
@@ -101,13 +114,28 @@ export function computeModuleCost(
     );
   }
   const lamelPrices = catalog.lamelaPrices[finish];
-  const lamelLengthCm = pickStrictlyGreaterLength(neededLamelLengthCm, lamelPrices);
+  const lamelLengthCm = pickStrictlyGreaterLength(
+    neededLamelLengthCm,
+    lamelPrices,
+  );
   const lamelUnitPrice = priceForLength(lamelPrices, lamelLengthCm);
 
-  const frameWidthProfileLengthCm = pickStrictlyGreaterLength(actualWidthCm, catalog.framePrices);
-  const frameHeightProfileLengthCm = pickStrictlyGreaterLength(actualHeightCm, catalog.framePrices);
-  const frameWidthPrice = priceForLength(catalog.framePrices, frameWidthProfileLengthCm);
-  const frameHeightPrice = priceForLength(catalog.framePrices, frameHeightProfileLengthCm);
+  const frameWidthProfileLengthCm = pickStrictlyGreaterLength(
+    actualWidthCm,
+    catalog.framePrices,
+  );
+  const frameHeightProfileLengthCm = pickStrictlyGreaterLength(
+    actualHeightCm,
+    catalog.framePrices,
+  );
+  const frameWidthPrice = priceForLength(
+    catalog.framePrices,
+    frameWidthProfileLengthCm,
+  );
+  const frameHeightPrice = priceForLength(
+    catalog.framePrices,
+    frameHeightProfileLengthCm,
+  );
 
   const okucieUnitPrice = catalog.okucieSetPrices[okucieMaterial];
 
@@ -168,9 +196,41 @@ export function computeModuleCost(
   };
 }
 
+/** Gdy pojedynczy odcinek z cennika nie pokrywa całej potrzebnej długości,
+ * klient łączy samodzielnie kilka odcinków najdłuższej dostępnej długości -
+ * więc zamiast blokować wycenę, dobieramy tyle sztuk, ile potrzeba. Ilość
+ * jest tylko punktem startowym: użytkownik doda/odejmie ją ręcznie w
+ * rozpisce kosztu, jeśli łączy odcinki inaczej. */
+export function pickJoinedLength(
+  neededCm: number,
+  priceByLength: Map<number, number>,
+): { lengthCm: number; count: number } {
+  const single = tryPickStrictlyGreaterLength(neededCm, priceByLength);
+  if (single !== undefined) return { lengthCm: single, count: 1 };
+
+  const lengths = [...priceByLength.keys()].sort((a, b) => a - b);
+  const maxLen = lengths.at(-1);
+  if (maxLen === undefined || maxLen <= 0) {
+    throw new PricingError("Brak żadnej długości w cenniku.");
+  }
+  let count = Math.ceil(neededCm / maxLen);
+  if (count * maxLen <= neededCm) count += 1;
+  return { lengthCm: maxLen, count };
+}
+
+function tryPickStrictlyGreaterLength(
+  neededCm: number,
+  priceByLength: Map<number, number>,
+): number | undefined {
+  const lengths = [...priceByLength.keys()].sort((a, b) => a - b);
+  return lengths.find((l) => l > neededCm);
+}
+
 /** Wspólna szyna górna i prowadnica dolna dla całego otworu - liczona raz,
  * na szerokość zadeklarowanego otworu do zabudowy, jeśli otwór zawiera co
- * najmniej jeden moduł jezdny. */
+ * najmniej jeden moduł jezdny. Jeśli szerokość otworu przekracza najdłuższy
+ * dostępny w cenniku odcinek, dobieramy kilka odcinków do złączenia zamiast
+ * blokować dodanie modułu - dokładną ilość klient dostosuje sam w rozpisce. */
 export function computeOpeningSlidingRailCost(
   openingWidthCm: number,
   catalog: PriceCatalog,
@@ -179,31 +239,40 @@ export function computeOpeningSlidingRailCost(
     throw new PricingError("Szerokość otworu musi być większa od zera.");
   }
 
-  const topProfileLengthCm = pickStrictlyGreaterLength(openingWidthCm, catalog.slidingTopPrices);
-  const bottomProfileLengthCm = pickStrictlyGreaterLength(openingWidthCm, catalog.slidingBottomPrices);
-  const topPrice = priceForLength(catalog.slidingTopPrices, topProfileLengthCm);
-  const bottomPrice = priceForLength(catalog.slidingBottomPrices, bottomProfileLengthCm);
+  const top = pickJoinedLength(openingWidthCm, catalog.slidingTopPrices);
+  const bottom = pickJoinedLength(openingWidthCm, catalog.slidingBottomPrices);
+  const topPrice = priceForLength(catalog.slidingTopPrices, top.lengthCm);
+  const bottomPrice = priceForLength(
+    catalog.slidingBottomPrices,
+    bottom.lengthCm,
+  );
 
   const lines: ModuleCostResult["lines"] = [
     {
-      label: `Profil górny do drzwi przesuwnych ${topProfileLengthCm} cm`,
-      quantity: 1,
+      label:
+        `Profil górny do drzwi przesuwnych ${top.lengthCm} cm` +
+        (top.count > 1 ? ` (${top.count} odcinki, łączone samodzielnie)` : ""),
+      quantity: top.count,
       unitPriceNetPln: topPrice,
-      totalNetPln: round2(topPrice),
+      totalNetPln: round2(top.count * topPrice),
     },
     {
-      label: `Profil dolny do drzwi przesuwnych ${bottomProfileLengthCm} cm`,
-      quantity: 1,
+      label:
+        `Profil dolny do drzwi przesuwnych ${bottom.lengthCm} cm` +
+        (bottom.count > 1
+          ? ` (${bottom.count} odcinki, łączone samodzielnie)`
+          : ""),
+      quantity: bottom.count,
       unitPriceNetPln: bottomPrice,
-      totalNetPln: round2(bottomPrice),
+      totalNetPln: round2(bottom.count * bottomPrice),
     },
   ];
 
   return {
-    topProfileLengthCm,
-    bottomProfileLengthCm,
+    topProfileLengthCm: top.lengthCm,
+    bottomProfileLengthCm: bottom.lengthCm,
     lines,
-    costNetPln: round2(topPrice + bottomPrice),
+    costNetPln: round2(top.count * topPrice + bottom.count * bottomPrice),
   };
 }
 

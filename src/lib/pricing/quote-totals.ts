@@ -1,11 +1,19 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { toNumber } from "@/lib/decimal";
-import { computeOpeningSlidingRailCost, netToGrossCost, round2 } from "./engine";
+import {
+  computeOpeningSlidingRailCost,
+  netToGrossCost,
+  round2,
+} from "./engine";
 import { loadPriceCatalog } from "./catalog";
 
 /** Przelicza szynę górną/dolną dla otworu (jeśli zawiera moduł jezdny) i
- * zapisuje ją na QuoteOpening, po czym przelicza sumy całej wyceny. */
+ * zapisuje ją na QuoteOpening, po czym przelicza sumy całej wyceny. Jeśli
+ * szyna już istnieje (bo np. użytkownik ręcznie skorygował ilość odcinków
+ * w rozpisce), NIE liczymy jej od nowa przy każdym dodaniu/usunięciu
+ * modułu w tym otworze - szyna zależy tylko od szerokości otworu, więc
+ * przeliczenie na nowo tylko nadpisałoby ręczną korektę bez potrzeby. */
 export async function recalculateOpeningRail(openingId: string) {
   const opening = await db.quoteOpening.findUniqueOrThrow({
     where: { id: openingId },
@@ -13,6 +21,7 @@ export async function recalculateOpeningRail(openingId: string) {
   });
 
   const hasSliding = opening.modules.some((m) => m.type === "JEZDNY");
+  const hasExistingRail = opening.railBreakdownJson !== null;
 
   if (!hasSliding) {
     await db.quoteOpening.update({
@@ -24,9 +33,12 @@ export async function recalculateOpeningRail(openingId: string) {
         railBreakdownJson: Prisma.JsonNull,
       },
     });
-  } else {
+  } else if (!hasExistingRail) {
     const catalog = await loadPriceCatalog();
-    const rail = computeOpeningSlidingRailCost(toNumber(opening.widthCm), catalog);
+    const rail = computeOpeningSlidingRailCost(
+      toNumber(opening.widthCm),
+      catalog,
+    );
     await db.quoteOpening.update({
       where: { id: openingId },
       data: {
@@ -42,7 +54,9 @@ export async function recalculateOpeningRail(openingId: string) {
 }
 
 async function recalculateQuoteTotalsByOpeningId(openingId: string) {
-  const opening = await db.quoteOpening.findUniqueOrThrow({ where: { id: openingId } });
+  const opening = await db.quoteOpening.findUniqueOrThrow({
+    where: { id: openingId },
+  });
   await recalculateQuoteTotals(opening.quoteId);
 }
 
@@ -55,7 +69,10 @@ export async function recalculateQuoteTotals(quoteId: string) {
   const modulesCostNet = quote.openings
     .flatMap((o) => o.modules)
     .reduce((sum, m) => sum + toNumber(m.costNetPln), 0);
-  const railsCostNet = quote.openings.reduce((sum, o) => sum + toNumber(o.slidingRailCostNetPln), 0);
+  const railsCostNet = quote.openings.reduce(
+    (sum, o) => sum + toNumber(o.slidingRailCostNetPln),
+    0,
+  );
 
   const totalCostNetPln = round2(modulesCostNet + railsCostNet);
   const totalCostGrossPln = netToGrossCost(totalCostNetPln);
@@ -65,7 +82,9 @@ export async function recalculateQuoteTotals(quoteId: string) {
   const markupPercent = toNumber(quote.markupPercent);
   const withMarkup = round2(totalCostGrossPln * (1 + markupPercent / 100));
   const withInstallation = round2(withMarkup + toNumber(quote.installationPln));
-  const withDiscount = round2(withInstallation * (1 - toNumber(quote.discountPercent) / 100));
+  const withDiscount = round2(
+    withInstallation * (1 - toNumber(quote.discountPercent) / 100),
+  );
 
   await db.quote.update({
     where: { id: quoteId },
