@@ -388,8 +388,8 @@ export default async function QuoteDetailPage({
 
               <AddModuleForm
                 action={addModule.bind(null, quote.id, opening.id)}
-                defaultWidthCm={toNumber(opening.widthCm)}
-                defaultHeightCm={toNumber(opening.heightCm)}
+                defaultWidthCm={opening.modules.length === 0 ? toNumber(opening.widthCm) : undefined}
+                defaultHeightCm={opening.modules.length === 0 ? toNumber(opening.heightCm) : undefined}
               />
             </div>
           );

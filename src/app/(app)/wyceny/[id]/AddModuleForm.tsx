@@ -10,8 +10,13 @@ export function AddModuleForm({
   defaultHeightCm,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
-  defaultWidthCm: number;
-  defaultHeightCm: number;
+  /** Podpowiedź wymiaru tylko dla pierwszego modułu w otworze (sensowna,
+   * gdy jeden moduł ma pokryć cały otwór). Dla kolejnych modułów zostaw
+   * `undefined` - pole musi zostać puste, żeby nie podstawiać po cichu
+   * pełnej szerokości/wysokości otworu zamiast zamierzonego mniejszego
+   * wymiaru panelu. */
+  defaultWidthCm?: number;
+  defaultHeightCm?: number;
 }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(action, {
     error: null,
@@ -43,6 +48,7 @@ export function AddModuleForm({
           <input
             name="widthCm"
             required
+            placeholder={defaultWidthCm === undefined ? "np. 235" : undefined}
             defaultValue={defaultWidthCm}
             className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
           />
@@ -52,6 +58,7 @@ export function AddModuleForm({
           <input
             name="heightCm"
             required
+            placeholder={defaultHeightCm === undefined ? "np. 220" : undefined}
             defaultValue={defaultHeightCm}
             className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
           />
