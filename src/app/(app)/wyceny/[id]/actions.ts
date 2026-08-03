@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { computeModuleCost, PricingError } from "@/lib/pricing/engine";
+import { toNumber } from "@/lib/decimal";
+import { computeModuleCost, computeOpeningSlidingRailCost, PricingError } from "@/lib/pricing/engine";
 import { loadPriceCatalog } from "@/lib/pricing/catalog";
 import { recalculateOpeningRail, recalculateQuoteTotals } from "@/lib/pricing/quote-totals";
 import type {
@@ -11,6 +12,10 @@ import type {
   ModuleType,
   OkucieMaterial,
 } from "@/lib/pricing/types";
+
+export interface ActionState {
+  error: string | null;
+}
 
 export async function updateQuoteHeader(quoteId: string, formData: FormData) {
   const get = (key: string) => String(formData.get(key) ?? "").trim();
@@ -37,25 +42,38 @@ export async function updateQuoteHeader(quoteId: string, formData: FormData) {
   revalidatePath(`/wyceny/${quoteId}`);
 }
 
-export async function addOpening(quoteId: string, formData: FormData) {
+/** Zwraca komunikat błędu zamiast rzucać wyjątek, żeby walidacja (np. zbyt
+ * duży wymiar) trafiała do użytkownika także na produkcji - Next.js chowa
+ * treść nieobsłużonych wyjątków w buildach produkcyjnych. */
+export async function addOpening(
+  quoteId: string,
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const label = String(formData.get("label") ?? "").trim() || "Otwór";
   const widthCm = Number(String(formData.get("widthCm") ?? "").replace(",", "."));
   const heightCm = Number(String(formData.get("heightCm") ?? "").replace(",", "."));
 
-  if (!Number.isFinite(widthCm) || widthCm <= 0) {
-    throw new PricingError("Podaj poprawną szerokość otworu.");
+  try {
+    if (!Number.isFinite(widthCm) || widthCm <= 0) {
+      throw new PricingError("Podaj poprawną szerokość otworu.");
+    }
+    if (!Number.isFinite(heightCm) || heightCm <= 0) {
+      throw new PricingError("Podaj poprawną wysokość otworu.");
+    }
+
+    const count = await db.quoteOpening.count({ where: { quoteId } });
+
+    await db.quoteOpening.create({
+      data: { quoteId, label, widthCm, heightCm, position: count },
+    });
+
+    revalidatePath(`/wyceny/${quoteId}`);
+    return { error: null };
+  } catch (error) {
+    if (error instanceof PricingError) return { error: error.message };
+    throw error;
   }
-  if (!Number.isFinite(heightCm) || heightCm <= 0) {
-    throw new PricingError("Podaj poprawną wysokość otworu.");
-  }
-
-  const count = await db.quoteOpening.count({ where: { quoteId } });
-
-  await db.quoteOpening.create({
-    data: { quoteId, label, widthCm, heightCm, position: count },
-  });
-
-  revalidatePath(`/wyceny/${quoteId}`);
 }
 
 export async function deleteOpening(quoteId: string, openingId: string) {
@@ -64,7 +82,12 @@ export async function deleteOpening(quoteId: string, openingId: string) {
   revalidatePath(`/wyceny/${quoteId}`);
 }
 
-export async function addModule(quoteId: string, openingId: string, formData: FormData) {
+export async function addModule(
+  quoteId: string,
+  openingId: string,
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const get = (key: string) => String(formData.get(key) ?? "").trim();
 
   const type = get("type") as ModuleType;
@@ -75,39 +98,53 @@ export async function addModule(quoteId: string, openingId: string, formData: Fo
   const okucieMaterial = get("okucieMaterial") as OkucieMaterial;
   const ralColor = get("ralColor") || null;
 
-  const catalog = await loadPriceCatalog();
-  const result = computeModuleCost(
-    { type, widthCm, heightCm, orientation, finish, okucieMaterial },
-    catalog,
-  );
+  try {
+    const catalog = await loadPriceCatalog();
+    const result = computeModuleCost(
+      { type, widthCm, heightCm, orientation, finish, okucieMaterial },
+      catalog,
+    );
 
-  const count = await db.quoteModule.count({ where: { openingId } });
+    if (type === "JEZDNY") {
+      // Sprawdź z wyprzedzeniem, czy wspólna szyna/prowadnica dla całego
+      // otworu w ogóle mieści się w cenniku, zanim cokolwiek zapiszemy -
+      // unika częściowego stanu (moduł zapisany, szyna nie do policzenia).
+      const opening = await db.quoteOpening.findUniqueOrThrow({ where: { id: openingId } });
+      computeOpeningSlidingRailCost(toNumber(opening.widthCm), catalog);
+    }
 
-  await db.quoteModule.create({
-    data: {
-      openingId,
-      position: count,
-      type,
-      widthCm,
-      heightCm,
-      actualWidthCm: result.actualWidthCm,
-      actualHeightCm: result.actualHeightCm,
-      orientation,
-      finish,
-      ralColor,
-      okucieMaterial,
-      lamelCount: result.lamelCount,
-      lamelLengthCm: result.lamelLengthCm,
-      uchwytSets: result.uchwytSets,
-      frameWidthProfileLengthCm: result.frameWidthProfileLengthCm,
-      frameHeightProfileLengthCm: result.frameHeightProfileLengthCm,
-      costBreakdownJson: JSON.parse(JSON.stringify(result.lines)),
-      costNetPln: result.costNetPln,
-    },
-  });
+    const count = await db.quoteModule.count({ where: { openingId } });
 
-  await recalculateOpeningRail(openingId);
-  revalidatePath(`/wyceny/${quoteId}`);
+    await db.quoteModule.create({
+      data: {
+        openingId,
+        position: count,
+        type,
+        widthCm,
+        heightCm,
+        actualWidthCm: result.actualWidthCm,
+        actualHeightCm: result.actualHeightCm,
+        orientation,
+        finish,
+        ralColor,
+        okucieMaterial,
+        lamelCount: result.lamelCount,
+        lamelLengthCm: result.lamelLengthCm,
+        uchwytSets: result.uchwytSets,
+        frameWidthProfileLengthCm: result.frameWidthProfileLengthCm,
+        frameHeightProfileLengthCm: result.frameHeightProfileLengthCm,
+        costBreakdownJson: JSON.parse(JSON.stringify(result.lines)),
+        costNetPln: result.costNetPln,
+      },
+    });
+
+    await recalculateOpeningRail(openingId);
+    revalidatePath(`/wyceny/${quoteId}`);
+    return { error: null };
+  } catch (error) {
+    if (error instanceof PricingError) return { error: error.message };
+    throw error;
+  }
 }
 
 export async function deleteModule(quoteId: string, openingId: string, moduleId: string) {
