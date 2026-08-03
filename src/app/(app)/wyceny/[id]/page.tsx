@@ -8,8 +8,10 @@ import {
   addModule,
   addOpening,
   deleteModule,
+  deleteModuleLine,
   deleteOpening,
   updateModuleDisplayDimensions,
+  updateModuleLineQuantity,
   updateQuoteHeader,
 } from "./actions";
 import { AddModuleForm } from "./AddModuleForm";
@@ -59,7 +61,9 @@ export default async function QuoteDetailPage({
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">{quote.number}</h1>
+          <h1 className="text-2xl font-semibold text-neutral-900">
+            {quote.number}
+          </h1>
           <p className="mt-1 text-neutral-600">
             Utworzono {quote.createdAt.toLocaleDateString("pl-PL")}
           </p>
@@ -74,13 +78,19 @@ export default async function QuoteDetailPage({
       </div>
 
       <section className="rounded-lg border border-neutral-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold text-neutral-900">Dane wyceny</h2>
+        <h2 className="mb-4 text-lg font-semibold text-neutral-900">
+          Dane wyceny
+        </h2>
         <form action={boundUpdateHeader} className="space-y-5">
           <div>
-            <h3 className="mb-2 text-sm font-medium text-neutral-700">Dane klienta</h3>
+            <h3 className="mb-2 text-sm font-medium text-neutral-700">
+              Dane klienta
+            </h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">Nazwa / imię i nazwisko</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">
+                  Nazwa / imię i nazwisko
+                </label>
                 <input
                   name="clientName"
                   defaultValue={quote.clientName ?? ""}
@@ -88,7 +98,9 @@ export default async function QuoteDetailPage({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">Telefon</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">
+                  Telefon
+                </label>
                 <input
                   name="clientPhone"
                   defaultValue={quote.clientPhone ?? ""}
@@ -97,7 +109,9 @@ export default async function QuoteDetailPage({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">E-mail</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">
+                  E-mail
+                </label>
                 <input
                   name="clientEmail"
                   type="email"
@@ -106,7 +120,9 @@ export default async function QuoteDetailPage({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">NIP (opcjonalnie)</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">
+                  NIP (opcjonalnie)
+                </label>
                 <input
                   name="clientNip"
                   defaultValue={quote.clientNip ?? ""}
@@ -114,7 +130,9 @@ export default async function QuoteDetailPage({
                 />
               </div>
               <div className="sm:col-span-2 lg:col-span-4">
-                <label className="mb-1 block text-xs font-medium text-neutral-600">Adres</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">
+                  Adres
+                </label>
                 <input
                   name="clientAddress"
                   defaultValue={quote.clientAddress ?? ""}
@@ -125,94 +143,119 @@ export default async function QuoteDetailPage({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">Status</label>
-            <select
-              name="status"
-              defaultValue={quote.status}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-            >
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">Ważna do</label>
-            <input
-              type="date"
-              name="validUntil"
-              defaultValue={toDateInputValue(quote.validUntil)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">Marża (%)</label>
-            <input
-              name="markupPercent"
-              defaultValue={toNumber(quote.markupPercent)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">Rabat (%)</label>
-            <input
-              name="discountPercent"
-              defaultValue={toNumber(quote.discountPercent)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">Montaż (zł)</label>
-            <input
-              name="installationPln"
-              defaultValue={toNumber(quote.installationPln)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div className="sm:col-span-2 lg:col-span-4">
-            <label className="mb-1 block text-sm font-medium text-neutral-700">Notatki</label>
-            <textarea
-              name="notes"
-              defaultValue={quote.notes ?? ""}
-              rows={2}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <button
-              type="submit"
-              className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
-            >
-              Zapisz
-            </button>
-          </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-neutral-700">
+                Status
+              </label>
+              <select
+                name="status"
+                defaultValue={quote.status}
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+              >
+                {STATUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-neutral-700">
+                Ważna do
+              </label>
+              <input
+                type="date"
+                name="validUntil"
+                defaultValue={toDateInputValue(quote.validUntil)}
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-neutral-700">
+                Marża (%)
+              </label>
+              <input
+                name="markupPercent"
+                defaultValue={toNumber(quote.markupPercent)}
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-neutral-700">
+                Rabat (%)
+              </label>
+              <input
+                name="discountPercent"
+                defaultValue={toNumber(quote.discountPercent)}
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-neutral-700">
+                Montaż (zł)
+              </label>
+              <input
+                name="installationPln"
+                defaultValue={toNumber(quote.installationPln)}
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <label className="mb-1 block text-sm font-medium text-neutral-700">
+                Notatki
+              </label>
+              <textarea
+                name="notes"
+                defaultValue={quote.notes ?? ""}
+                rows={2}
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <button
+                type="submit"
+                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+              >
+                Zapisz
+              </button>
+            </div>
           </div>
         </form>
       </section>
 
       <section className="space-y-6">
-        <h2 className="text-lg font-semibold text-neutral-900">Otwory i moduły</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">
+          Otwory i moduły
+        </h2>
 
         {quote.openings.map((opening) => {
-          const boundDeleteModule = deleteModule.bind(null, quote.id, opening.id);
+          const boundDeleteModule = deleteModule.bind(
+            null,
+            quote.id,
+            opening.id,
+          );
           const hasSliding = opening.modules.some((m) => m.type === "JEZDNY");
 
           return (
-            <div key={opening.id} className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div
+              key={opening.id}
+              className="rounded-lg border border-neutral-200 bg-white p-6"
+            >
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h3 className="font-medium text-neutral-900">
                     {opening.label}{" "}
                     <span className="text-neutral-400">
-                      · otwór {toNumber(opening.widthCm)}×{toNumber(opening.heightCm)} cm
+                      · otwór {toNumber(opening.widthCm)}×
+                      {toNumber(opening.heightCm)} cm
                     </span>
                   </h3>
                 </div>
                 <form action={boundDeleteOpening.bind(null, opening.id)}>
-                  <button type="submit" className="text-sm text-red-600 hover:underline">
+                  <button
+                    type="submit"
+                    className="text-sm text-red-600 hover:underline"
+                  >
                     Usuń otwór
                   </button>
                 </form>
@@ -221,23 +264,31 @@ export default async function QuoteDetailPage({
               {hasSliding && (
                 <div className="mb-4 rounded-md border border-blue-100 bg-blue-50 p-3">
                   <p className="mb-1.5 text-xs font-medium uppercase text-blue-700">
-                    Wspólne dla otworu (jeden komplet na cały otwór, niezależnie od liczby modułów jezdnych)
+                    Wspólne dla otworu (jeden komplet na cały otwór, niezależnie
+                    od liczby modułów jezdnych)
                   </p>
                   <table className="w-full max-w-lg text-xs">
                     <tbody>
-                      {parseCostBreakdown(opening.railBreakdownJson).map((line, i) => (
-                        <tr key={i}>
-                          <td className="py-0.5 pr-3 text-neutral-600">{line.label}</td>
-                          <td className="py-0.5 pr-3 text-neutral-600">
-                            {line.quantity}× {fmt(line.unitPriceNetPln)} zł
-                          </td>
-                          <td className="py-0.5 text-right text-neutral-700">
-                            {fmt(line.totalNetPln)} zł netto
-                          </td>
-                        </tr>
-                      ))}
+                      {parseCostBreakdown(opening.railBreakdownJson).map(
+                        (line, i) => (
+                          <tr key={i}>
+                            <td className="py-0.5 pr-3 text-neutral-600">
+                              {line.label}
+                            </td>
+                            <td className="py-0.5 pr-3 text-neutral-600">
+                              {line.quantity}× {fmt(line.unitPriceNetPln)} zł
+                            </td>
+                            <td className="py-0.5 text-right text-neutral-700">
+                              {fmt(line.totalNetPln)} zł netto
+                            </td>
+                          </tr>
+                        ),
+                      )}
                       <tr className="border-t border-blue-200 font-medium">
-                        <td className="py-0.5 pr-3 text-neutral-800" colSpan={2}>
+                        <td
+                          className="py-0.5 pr-3 text-neutral-800"
+                          colSpan={2}
+                        >
                           Razem netto (szyna + prowadnica)
                         </td>
                         <td className="py-0.5 text-right text-neutral-900">
@@ -266,14 +317,29 @@ export default async function QuoteDetailPage({
                   <tbody>
                     {opening.modules.map((m) => {
                       const breakdown = parseCostBreakdown(m.costBreakdownJson);
-                      const boundUpdateDisplayDims = updateModuleDisplayDimensions.bind(
-                        null,
-                        quote.id,
-                        m.id,
+                      const boundUpdateDisplayDims =
+                        updateModuleDisplayDimensions.bind(
+                          null,
+                          quote.id,
+                          m.id,
+                        );
+                      const hasDisplayOverride =
+                        m.displayWidthCm !== null || m.displayHeightCm !== null;
+                      const shownWidthCm = toNumber(
+                        m.displayWidthCm ?? m.actualWidthCm,
                       );
-                      const hasDisplayOverride = m.displayWidthCm !== null || m.displayHeightCm !== null;
-                      const shownWidthCm = toNumber(m.displayWidthCm ?? m.actualWidthCm);
-                      const shownHeightCm = toNumber(m.displayHeightCm ?? m.actualHeightCm);
+                      const shownHeightCm = toNumber(
+                        m.displayHeightCm ?? m.actualHeightCm,
+                      );
+                      // Ilości lameli/okuć mogą zostać ręcznie skorygowane w rozpisce
+                      // poniżej, więc podsumowanie w wierszu głównym czyta je stamtąd,
+                      // żeby nie rozjechać się z faktycznie policzonym kosztem.
+                      const lamelLine = breakdown.find((l) =>
+                        l.label.startsWith("Lamela "),
+                      );
+                      const okucieLine = breakdown.find((l) =>
+                        l.label.startsWith("Okucie "),
+                      );
                       return (
                         <Fragment key={m.id}>
                           <tr className="border-t border-neutral-100">
@@ -284,17 +350,23 @@ export default async function QuoteDetailPage({
                               {shownWidthCm}×{shownHeightCm} cm
                               {hasDisplayOverride ? (
                                 <div className="text-xs text-amber-600">
-                                  nadpisane do podglądu · rzeczywisty {toNumber(m.actualWidthCm)}×
+                                  nadpisane do podglądu · rzeczywisty{" "}
+                                  {toNumber(m.actualWidthCm)}×
                                   {toNumber(m.actualHeightCm)} cm
                                 </div>
                               ) : (
-                                (toNumber(m.actualWidthCm) !== toNumber(m.widthCm) ||
-                                  toNumber(m.actualHeightCm) !== toNumber(m.heightCm)) && (
+                                (toNumber(m.actualWidthCm) !==
+                                  toNumber(m.widthCm) ||
+                                  toNumber(m.actualHeightCm) !==
+                                    toNumber(m.heightCm)) && (
                                   <div className="text-xs text-neutral-400">
-                                    otwór {toNumber(m.widthCm)}×{toNumber(m.heightCm)} cm
-                                    {toNumber(m.actualWidthCm) !== toNumber(m.widthCm) &&
+                                    otwór {toNumber(m.widthCm)}×
+                                    {toNumber(m.heightCm)} cm
+                                    {toNumber(m.actualWidthCm) !==
+                                      toNumber(m.widthCm) &&
                                       ` · o ${fmt(toNumber(m.widthCm) - toNumber(m.actualWidthCm))} cm węższy`}
-                                    {toNumber(m.actualHeightCm) !== toNumber(m.heightCm) &&
+                                    {toNumber(m.actualHeightCm) !==
+                                      toNumber(m.heightCm) &&
                                       ` · o ${fmt(toNumber(m.heightCm) - toNumber(m.actualHeightCm))} cm niższy`}
                                   </div>
                                 )
@@ -309,76 +381,148 @@ export default async function QuoteDetailPage({
                                 >
                                   <input
                                     name="displayWidthCm"
-                                    defaultValue={m.displayWidthCm ? toNumber(m.displayWidthCm) : ""}
+                                    defaultValue={
+                                      m.displayWidthCm
+                                        ? toNumber(m.displayWidthCm)
+                                        : ""
+                                    }
                                     placeholder="szer."
                                     className="w-16 rounded border border-neutral-300 px-1 py-0.5 text-xs"
                                   />
                                   <input
                                     name="displayHeightCm"
-                                    defaultValue={m.displayHeightCm ? toNumber(m.displayHeightCm) : ""}
+                                    defaultValue={
+                                      m.displayHeightCm
+                                        ? toNumber(m.displayHeightCm)
+                                        : ""
+                                    }
                                     placeholder="wys."
                                     className="w-16 rounded border border-neutral-300 px-1 py-0.5 text-xs"
                                   />
-                                  <button type="submit" className="text-xs text-blue-600 underline">
+                                  <button
+                                    type="submit"
+                                    className="text-xs text-blue-600 underline"
+                                  >
                                     Zapisz
                                   </button>
                                 </form>
                               </details>
                             </td>
                             <td className="py-1.5 text-neutral-700">
-                              {m.orientation === "POZIOMO" ? "poziome" : "pionowe"}
+                              {m.orientation === "POZIOMO"
+                                ? "poziome"
+                                : "pionowe"}
                             </td>
                             <td className="py-1.5 text-neutral-700">
-                              {m.finish === "MALOWANA_RAL" ? "RAL" : "drewnopodobna"}
+                              {m.finish === "MALOWANA_RAL"
+                                ? "RAL"
+                                : "drewnopodobna"}
                               {m.ralColor ? ` (${m.ralColor})` : ""}
                             </td>
                             <td className="py-1.5 text-neutral-700">
-                              {m.lamelCount}× {m.lamelLengthCm} cm
+                              {lamelLine
+                                ? `${lamelLine.quantity}× ${m.lamelLengthCm} cm`
+                                : "usunięte"}
                             </td>
                             <td className="py-1.5 text-neutral-700">
-                              {m.uchwytSets}× {m.okucieMaterial === "ALUMINIOWE" ? "alu" : "plastik"}
+                              {okucieLine
+                                ? `${okucieLine.quantity}× ${m.okucieMaterial === "ALUMINIOWE" ? "alu" : "plastik"}`
+                                : "usunięte"}
                             </td>
                             <td className="py-1.5 font-medium text-neutral-900">
                               {fmt(toNumber(m.costNetPln))} zł
                             </td>
                             <td className="py-1.5 text-right">
                               <form action={boundDeleteModule.bind(null, m.id)}>
-                                <button type="submit" className="text-red-600 hover:underline">
+                                <button
+                                  type="submit"
+                                  className="text-red-600 hover:underline"
+                                >
                                   Usuń
                                 </button>
                               </form>
                             </td>
                           </tr>
-                          {breakdown.length > 0 && (
-                            <tr className="bg-neutral-50">
-                              <td></td>
-                              <td colSpan={7} className="py-2">
-                                <table className="w-full max-w-lg text-xs">
-                                  <tbody>
-                                    {breakdown.map((line, i) => (
+                          <tr className="bg-neutral-50">
+                            <td></td>
+                            <td colSpan={7} className="py-2">
+                              <table className="w-full max-w-xl text-xs">
+                                <tbody>
+                                  {breakdown.map((line, i) => {
+                                    const boundUpdateLineQty =
+                                      updateModuleLineQuantity.bind(
+                                        null,
+                                        quote.id,
+                                        m.id,
+                                        i,
+                                      );
+                                    const boundDeleteLine =
+                                      deleteModuleLine.bind(
+                                        null,
+                                        quote.id,
+                                        m.id,
+                                        i,
+                                      );
+                                    return (
                                       <tr key={i}>
-                                        <td className="py-0.5 pr-3 text-neutral-500">{line.label}</td>
                                         <td className="py-0.5 pr-3 text-neutral-500">
-                                          {line.quantity}× {fmt(line.unitPriceNetPln)} zł
+                                          {line.label}
+                                        </td>
+                                        <td className="py-0.5 pr-3 text-neutral-500">
+                                          <form
+                                            action={boundUpdateLineQty}
+                                            className="flex items-center gap-1"
+                                          >
+                                            <input
+                                              name="quantity"
+                                              defaultValue={line.quantity}
+                                              className="w-12 rounded border border-neutral-300 px-1 py-0.5 text-xs"
+                                            />
+                                            <span>
+                                              × {fmt(line.unitPriceNetPln)} zł
+                                            </span>
+                                            <button
+                                              type="submit"
+                                              className="text-blue-600 underline"
+                                            >
+                                              Zapisz
+                                            </button>
+                                          </form>
                                         </td>
                                         <td className="py-0.5 text-right text-neutral-600">
                                           {fmt(line.totalNetPln)} zł netto
                                         </td>
+                                        <td className="py-0.5 pl-2 text-right">
+                                          <form action={boundDeleteLine}>
+                                            <button
+                                              type="submit"
+                                              className="text-red-600 hover:underline"
+                                            >
+                                              Usuń
+                                            </button>
+                                          </form>
+                                        </td>
                                       </tr>
-                                    ))}
-                                    <tr className="border-t border-neutral-200 font-medium">
-                                      <td className="py-0.5 pr-3 text-neutral-700" colSpan={2}>
-                                        Razem netto (koszt dostawcy)
-                                      </td>
-                                      <td className="py-0.5 text-right text-neutral-800">
-                                        {fmt(toNumber(m.costNetPln))} zł
-                                      </td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </td>
-                            </tr>
-                          )}
+                                    );
+                                  })}
+                                  <tr className="border-t border-neutral-200 font-medium">
+                                    <td
+                                      className="py-0.5 pr-3 text-neutral-700"
+                                      colSpan={2}
+                                    >
+                                      Razem netto (koszt dostawcy)
+                                    </td>
+                                    <td
+                                      className="py-0.5 text-right text-neutral-800"
+                                      colSpan={2}
+                                    >
+                                      {fmt(toNumber(m.costNetPln))} zł
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
                         </Fragment>
                       );
                     })}
@@ -388,8 +532,16 @@ export default async function QuoteDetailPage({
 
               <AddModuleForm
                 action={addModule.bind(null, quote.id, opening.id)}
-                defaultWidthCm={opening.modules.length === 0 ? toNumber(opening.widthCm) : undefined}
-                defaultHeightCm={opening.modules.length === 0 ? toNumber(opening.heightCm) : undefined}
+                defaultWidthCm={
+                  opening.modules.length === 0
+                    ? toNumber(opening.widthCm)
+                    : undefined
+                }
+                defaultHeightCm={
+                  opening.modules.length === 0
+                    ? toNumber(opening.heightCm)
+                    : undefined
+                }
               />
             </div>
           );
@@ -399,7 +551,9 @@ export default async function QuoteDetailPage({
       </section>
 
       <section className="rounded-lg border border-neutral-200 bg-white p-6">
-        <h2 className="mb-3 text-lg font-semibold text-neutral-900">Podsumowanie</h2>
+        <h2 className="mb-3 text-lg font-semibold text-neutral-900">
+          Podsumowanie
+        </h2>
         {(() => {
           const costGrossPln = toNumber(quote.totalCostPln);
           const markupPercent = toNumber(quote.markupPercent);
@@ -415,7 +569,9 @@ export default async function QuoteDetailPage({
                 <dd className="text-neutral-900">{fmt(costGrossPln)} zł</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-neutral-600">Marża ({fmt(markupPercent)}%)</dt>
+                <dt className="text-neutral-600">
+                  Marża ({fmt(markupPercent)}%)
+                </dt>
                 <dd className="text-neutral-900">
                   {fmt(round2(withMarkup - costGrossPln))} zł
                 </dd>
@@ -423,20 +579,27 @@ export default async function QuoteDetailPage({
               {installationPln > 0 && (
                 <div className="flex justify-between">
                   <dt className="text-neutral-600">Montaż</dt>
-                  <dd className="text-neutral-900">{fmt(installationPln)} zł</dd>
+                  <dd className="text-neutral-900">
+                    {fmt(installationPln)} zł
+                  </dd>
                 </div>
               )}
               {discountPercent > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-neutral-600">Rabat ({fmt(discountPercent)}%)</dt>
+                  <dt className="text-neutral-600">
+                    Rabat ({fmt(discountPercent)}%)
+                  </dt>
                   <dd className="text-neutral-900">
-                    -{fmt(round2(withInstallation * (discountPercent / 100)))} zł
+                    -{fmt(round2(withInstallation * (discountPercent / 100)))}{" "}
+                    zł
                   </dd>
                 </div>
               )}
               <div className="flex justify-between border-t border-neutral-200 pt-2 text-base font-semibold">
                 <dt className="text-neutral-900">Cena dla klienta (brutto)</dt>
-                <dd className="text-neutral-900">{fmt(toNumber(quote.totalPricePln))} zł</dd>
+                <dd className="text-neutral-900">
+                  {fmt(toNumber(quote.totalPricePln))} zł
+                </dd>
               </div>
             </dl>
           );

@@ -3,15 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/decimal";
-import { computeModuleCost, computeOpeningSlidingRailCost, PricingError } from "@/lib/pricing/engine";
+import { computeModuleCost, computeOpeningSlidingRailCost, PricingError, round2 } from "@/lib/pricing/engine";
 import { loadPriceCatalog } from "@/lib/pricing/catalog";
 import { recalculateOpeningRail, recalculateQuoteTotals } from "@/lib/pricing/quote-totals";
 import type {
   LamelaFinish,
   LamelaOrientation,
+  ModuleCostLine,
   ModuleType,
   OkucieMaterial,
 } from "@/lib/pricing/types";
+
+function parseCostLines(json: unknown): ModuleCostLine[] {
+  if (!Array.isArray(json)) return [];
+  return json as ModuleCostLine[];
+}
 
 export interface ActionState {
   error: string | null;
@@ -177,5 +183,51 @@ export async function updateModuleDisplayDimensions(
     },
   });
 
+  revalidatePath(`/wyceny/${quoteId}`);
+}
+
+/** Ręczna korekta pozycji w rozpisce kosztu modułu (np. rzeczywiście
+ * zużyta ilość lameli różni się od wyliczonej z formuły) - zmienia tylko
+ * tę jedną wycenę, nie cennik ani silnik liczący. */
+export async function updateModuleLineQuantity(
+  quoteId: string,
+  moduleId: string,
+  lineIndex: number,
+  formData: FormData,
+) {
+  const quantity = Number(String(formData.get("quantity") ?? "").trim().replace(",", "."));
+  if (!Number.isFinite(quantity) || quantity < 0) return;
+
+  const quoteModule = await db.quoteModule.findUniqueOrThrow({ where: { id: moduleId } });
+  const lines = parseCostLines(quoteModule.costBreakdownJson);
+  const line = lines[lineIndex];
+  if (!line) return;
+
+  line.quantity = quantity;
+  line.totalNetPln = round2(quantity * line.unitPriceNetPln);
+  const costNetPln = round2(lines.reduce((sum, l) => sum + l.totalNetPln, 0));
+
+  await db.quoteModule.update({
+    where: { id: moduleId },
+    data: { costBreakdownJson: JSON.parse(JSON.stringify(lines)), costNetPln },
+  });
+
+  await recalculateQuoteTotals(quoteId);
+  revalidatePath(`/wyceny/${quoteId}`);
+}
+
+/** Usunięcie pojedynczej pozycji z rozpiski kosztu modułu (np. profil ramy,
+ * którego w danym montażu faktycznie się nie użyje). */
+export async function deleteModuleLine(quoteId: string, moduleId: string, lineIndex: number) {
+  const quoteModule = await db.quoteModule.findUniqueOrThrow({ where: { id: moduleId } });
+  const lines = parseCostLines(quoteModule.costBreakdownJson).filter((_, i) => i !== lineIndex);
+  const costNetPln = round2(lines.reduce((sum, l) => sum + l.totalNetPln, 0));
+
+  await db.quoteModule.update({
+    where: { id: moduleId },
+    data: { costBreakdownJson: JSON.parse(JSON.stringify(lines)), costNetPln },
+  });
+
+  await recalculateQuoteTotals(quoteId);
   revalidatePath(`/wyceny/${quoteId}`);
 }
